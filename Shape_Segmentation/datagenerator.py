@@ -39,11 +39,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         #image generator for data augmentation
         dg_args = dict(   featurewise_center = False, 
                                 samplewise_center = False,
-                                rotation_range = 15, 
-                                width_shift_range = 0.1, 
-                                height_shift_range = 0.1, 
-                                shear_range = 0.01,
-                                zoom_range = [0.9, 1.15],  
+                                rotation_range = 15,  
                                 horizontal_flip = True, 
                                 vertical_flip = True,
                                 fill_mode = 'reflect',
