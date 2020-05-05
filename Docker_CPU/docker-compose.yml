@@ -1,0 +1,23 @@
+version: '3.5'
+
+services:
+  mining_shapes:
+    container_name: shapes_mining
+    build:
+      context: ./
+      network: host
+    ports: 
+      - '8888:8888' #for jupyter notebook
+      - '6006:6006' #for tensorboard
+    volumes:
+      - ../:/home/Code
+      - /home/michael/Desktop/Ceramic_dataset/val:/home/images/val #train segmentation
+      - /home/michael/Desktop/Ceramic_dataset/valannot:/home/images/valannot #train segmentation
+      - /home/michael/Desktop/tf_records:/home/tf_records #for splitrecords
+      - /home/michael/Desktop/faster_rcnn_resnet101_coco_2018_01_28:/home/faster_rcnn_resnet101_coco_2018_01_28
+      
+      - /home/michael/Desktop/apply:/home/images/apply
+      - /home/michael/Desktop/inference_graph_mining_pages_v8:/home/models/inference_graph_mining_pages_v8
+      - /home/michael/Desktop/inference_graph_figureid_v1:/home/models/inference_graph_figureid_v1
+      - /home/michael/Desktop/ResultRecord:/home/images/OUTPUT
+    working_dir: /home/Code
