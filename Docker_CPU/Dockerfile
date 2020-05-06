@@ -21,7 +21,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y protobuf-compiler python3-
     pip install tensorflow==1.15.0 && \
     pip install opencv-python && \
     pip install pytesseract && \
-    pip install pandas
+    pip install pandas && \
+    pip install pylint
 
 
 # Install pycocoapi

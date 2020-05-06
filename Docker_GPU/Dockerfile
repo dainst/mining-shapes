@@ -23,7 +23,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y protobuf-compiler python3-
     pip3 install tensorflow-gpu==1.15.0 && \
     pip3 install opencv-python && \
     pip3 install pytesseract && \
-    pip3 install pandas
+    pip3 install pandas && \
+    pip3 install pylint
 
 # Install pycocoapi
 RUN git clone --depth 1 https://github.com/cocodataset/cocoapi.git && \
