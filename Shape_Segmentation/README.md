@@ -10,11 +10,8 @@ One possibility is to train a U-net architecture from scratch. The code for the 
 We achieved much better results by using the u-net architecture from the [segmentation_models](https://github.com/qubvel/segmentation_models) package. Here, the encoder network was pretrained on imagenet and the encoder weights were frezzed during training. Therefore, only the decoder had to be trained which drastically reduced the number of parameters to be trained. An example usage of the pretrained u-net is shown in notebook [Ceramics_Segmentation_colab.ipynb](Ceramics_Segmentation_colab.ipynb).
 
 
-## Installing Anaconda environment
-```
-cd Shape_Segmentation <br/>
-conda env create -f environment.yml
-```
+## Set up Docker 
+See [README](../README.md).
 
 ## Input Image data 
 To train the segmentation model the image data has to converted into the following format:<br/>
@@ -24,9 +21,17 @@ To train the segmentation model the image data has to converted into the followi
 You can use the notebook [preprocess_data](preprocess_data.ipynb) to prepare the images exported by [CVAT](https://github.com/opencv/cvat). The masks in CVAT should be dumped as mask zip.
 
 ## Training data
-The training can be downloaded from the the [DAI CVAT server](http://cvat.dainst.de/). You have to be in the DAI-vpn reach the server.
+The training can be downloaded from the the [DAI CVAT server](http://cvat.dainst.de/). You have to be in the DAI-vpn reach the server. Use script [split_cvat_data](split_cvat_data.py) to split the exported data into train/test/validation sets.
 
+## Trained model
+You can find the model trained with ResNet34 backbone [here](https://cumulus.dainst.org/index.php/s/fXjDbfXcAXHyWTf).
+
+## Run training and evaluation
+Mount training data to docker container.  Use the docker-compose.yml file for that. There are two compose files. One for GPU and one for CPU configuration. 
+```
+python train.py --help (see required arguments)
+python train.py --arguments
+```
 ## Possible improvements
-1. Data augmentation
-2. Improve annotation quality of training data
-3. Tune model hyperparameters
+1. Improve annotation quality of training data
+2. Tune model hyperparameters
