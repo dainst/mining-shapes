@@ -63,14 +63,22 @@ RUN pip install -U segmentation-models==0.2.1
 #add non root user to access locally data created in dev container 
 ARG USERNAME=shape_miner
 RUN useradd -ms /bin/bash  $USERNAME -u 1000
-USER $USERNAME
+
 # store vscode extensions installed in vscode devcontainer
 RUN mkdir -p /home/$USERNAME/.vscode-server/extensions \
         /home/$USERNAME/.vscode-server-insiders/extensions \
     && chown -R $USERNAME \
         /home/$USERNAME/.vscode-server \
         /home/$USERNAME/.vscode-server-insiders
-
+#store bash history
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+    && echo $SNIPPET >> "/root/.bashrc" \
+    # [Optional] If you have a non-root user
+    && mkdir /commandhistory \
+    && touch /commandhistory/.bash_history \
+    && chown -R $USERNAME /commandhistory \
+    && echo $SNIPPET >> "/home/$USERNAME/.bashrc" 
+USER $USERNAME
 # Entrypoint
 WORKDIR /models/research/object_detection
 ENTRYPOINT ["jupyter", "notebook", "--ip=0.0.0.0", "--no-browser", "--allow-root"]

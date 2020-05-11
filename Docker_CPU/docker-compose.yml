@@ -29,6 +29,7 @@ services:
       #vscode extensions
       - ../vscode_remote/extensions/:/home/shape_miner/.vscode-server/extensions/
       - ../vscode_remote/insiders/:/home/shape_miner/.vscode-server-insiders/extensions/
+      - ../vscode_remote/bashhistory:/commandhistory
     user: 1000:1000
     working_dir: /home/Code
     tty: true
