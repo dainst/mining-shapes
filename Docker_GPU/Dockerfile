@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.0-cudnn7-devel
+FROM tensorflow/tensorflow:1.15.2-gpu
 
 RUN apt-get update && apt-get upgrade -y
 
@@ -6,25 +6,26 @@ RUN apt-get install -y git
 
 RUN apt-get install -y tesseract-ocr
 
-RUN apt-get install -y python3 && apt-get install -y python3-pip
 
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.6 1
+#RUN apt-get install -y python3 && apt-get install -y python3-pip
+
+#RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.6 1
 
 # Installing the Tensorflow Object Detection API
 RUN git clone https://github.com/tensorflow/models.git
 
 # Install object detection api dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y protobuf-compiler python3-pil python3-lxml python3-tk && \
-    pip3 install Cython && \
-    pip3 install contextlib2 && \
-    pip3 install jupyter && \
-    pip3 install matplotlib && \
-    pip3 install Pillow && \
-    pip3 install tensorflow-gpu==1.15.0 && \
-    pip3 install opencv-python && \
-    pip3 install pytesseract && \
-    pip3 install pandas && \
-    pip3 install pylint
+    pip install Cython && \
+    pip install contextlib2 && \
+    pip install jupyter && \
+    pip install matplotlib && \
+    pip install Pillow && \
+    pip install opencv-python && \
+    pip install pytesseract && \
+    pip install pandas && \
+    pip install pylint && \
+    pip install tensorboard
 
 #to use keras plot_model function
 RUN pip install pydot && \
