@@ -19,7 +19,9 @@ import zipfile
 import cv2
 import pytesseract
 import shutil
-
+import json
+import jsonlines
+import re
 
 
 
@@ -29,7 +31,7 @@ import pandas as pd
 import tensorflow as tf
 
 from PIL import Image
-from object_detection.utils import dataset_util, label_map_util
+from object_detection.utils import dataset_util
 from collections import namedtuple, OrderedDict
 
 # This is needed since the notebook is stored in the object_detection folder.
@@ -44,7 +46,7 @@ if StrictVersion(tf.__version__) < StrictVersion('1.9.0'):
 # This is needed to display the images.
 
 
-#from utils import label_map_util
+from utils import label_map_util
 
 #from utils import visualization_utils as vis_util
 inputdirectory = '/home/images/apply'
@@ -52,8 +54,6 @@ GRAPH = '/frozen_inference_graph.pb'
 LABELS = '/label_map.pbtxt'
 PAGE_MODEL = '/home/models/inference_graph_mining_pages_v8'
 FIGID_MODEL = '/home/models/inference_graph_figureid_v1'
-
-PATH_TO_LABELS = '/home/models/inference_graph_mining_pages_v8/label_map.pbtxt'
 OUTPATH = '/home/images/OUTPUT/'
 
 def get_labelmap_as_df(PATH_TO_LABELS): 
@@ -223,7 +223,7 @@ def cut_image_savetemp(dataframe):
     bbox_ymax = int((ymax)*dataframe['page_height'])
     bbox_np = page_imgnp[bbox_ymin:bbox_ymax, bbox_xmin:bbox_xmax]
     dataframe['figure_tmpid'] = dataframe.name
-    dataframe['figure_path'] = OUTPATH + str(dataframe['pub_key']) + '_' + str(dataframe['pub_value']) + '_' + str(dataframe['pageid_raw']) + '_' + 'tempid' + str(dataframe['figure_tmpid']) + '.png'
+    dataframe['figure_path'] = OUTPATH + str(dataframe['pub_key']) + '_' + str(dataframe['pub_value']) + '_' + 'tempid' + str(dataframe['figure_tmpid']) + '.png'
     cv2.imwrite( str(dataframe['figure_path']), bbox_np )
     
     return dataframe
@@ -259,6 +259,13 @@ def ocrPreProcessing(image):
         value=[mean, mean, mean]
     )
     return image
+
+
+
+def ocrPostProcessing_Pageid(row):
+    pageid_raw = row['pageid_raw']
+    row['pageid_int'] = [int(s) for s in pageid_raw.split() if s.isdigit()]
+    return row
 
 
 def  merge_info(all_detections, bestpages_result ):
@@ -307,6 +314,83 @@ def split(df, group):
     data = namedtuple('data', ['filename', 'object'])
     gb = df.groupby(group)
     return [data(filename, gb.get_group(x)) for filename, x in zip(gb.groups.keys(), gb.groups)]
+
+
+def createFIND_JSONL(df, file):   
+    FIND_template = '{"category":"","identifier":"","relations":{"isChildOf":"","isDepictedIn":[],"isInstanceOf":[]}}'
+    FIND = json.loads(FIND_template)
+    print(FIND)
+    #print(df['figure_tmpid'])
+    FIND["identifier"] = 'Find_' + str(df['figure_tmpid'])
+    FIND["category"] = 'Pottery'
+    
+    #FIND["shortDescription"] = str(df['figid_raw'])
+    relations = FIND["relations"]
+    relations["isChildOf"] = 'Findspot_refferedtoin_' + str(df['pub_key']) + '_' + str(df['pub_value'])
+    InstanceOfList = relations["isInstanceOf"]
+    typename = 'Type_' + str(df['pub_key']) + '_' + str(df['pub_value']) + '_' + 'tempid' + str(df['figure_tmpid'])
+    InstanceOfList.append(typename)
+    #print(type(relations['isDepictedIn']))
+    depictedInList = relations["isDepictedIn"]
+    imagename = str(df['pub_key']) + '_' + str(df['pub_value']) + '_' + 'tempid' +  str(df['figure_tmpid'] )+ '.png'
+    depictedInList.append(imagename)
+    print(type(FIND))
+    json.dump(FIND, file)
+    file.write("\n")
+  
+def createTYPE_JSONL(df, file):   
+    TYPE_template = '{"category":"","identifier":"","relations":{"isChildOf":""}}'
+    TYPE = json.loads(TYPE_template)
+    #print(df['figure_tmpid'])
+    TYPE["identifier"] = 'Type_' + str(df['pub_key']) + '_' + str(df['pub_value']) + '_' + 'tempid' + str(df['figure_tmpid'])
+    TYPE["category"] = 'Type'
+    relations = TYPE["relations"]
+    relations["isChildOf"] = 'Catalog_' + str(df['pub_key']) + '_' + str(df['pub_value'])
+    #print(type(relations['isDepictedIn']))
+    json.dump(TYPE, file)
+    file.write("\n")
+    
+def createDRAWING_JSONL(df, file):   
+    DRAWING_template = '{"category":"","identifier":"", "description":"none","literature":[{"quotation":"none","zenonId":""}]}'
+    DRAWING = json.loads(DRAWING_template)
+    #print(df['figure_tmpid'])
+    DRAWING["identifier"] = str(df['pub_key']) + '_' + str(df['pub_value']) + '_' + 'tempid' +  str(df['figure_tmpid'] )+ '.png'
+    DRAWING["category"] = 'Drawing'
+    DRAWING["description"] = 'PAGEID_RAW: ' + str(df['pageid_raw']) + 'PAGEINFO_RAW: ' + str(df['pageinfo_raw'])
+    literature = DRAWING["literature"]
+    literature0 = literature[0]
+    literature0['zenonId'] = str(df['pub_key']) + '_' + str(df['pub_value'])
+    
+    literature0['quotation'] = str(df['figid_raw'])
+    if not literature0['quotation']:
+        literature0['quotation'] = 'no page detected'
+
+    #print(DRAWING(relations['isDepictedIn']))
+    json.dump(DRAWING, file)
+    file.write("\n")
+
+def createCATALOG_JSONL(df, file):
+    CATALOG_template = '{"category":"","identifier":"","shortDescription":"In what aspects differ types in this catalog and what do they have in common?", "relations":{"isDepictedIn":[]}}'
+    CATALOG = json.loads(CATALOG_template)
+    #print(df['figure_tmpid'])
+    CATALOG["identifier"] = 'Catalog_' + str(df['pub_key']) + '_' + str(df['pub_value'])
+    relations = CATALOG["relations"]
+    depictedInList = relations["isDepictedIn"]
+    depictedInList.append('Catalogcover_' + str(df['pub_key']) + '_' + str(df['pub_value']) + '.png')
+    CATALOG["category"] = 'TypeCatalog'
+    json.dump(CATALOG, file)
+    file.write("\n")
+
+def createTRENCH_JSONL(df, file):
+    TRENCH_template = '{"category":"","identifier":"","shortDescription":"Where have the Objects been found?"}'
+    TRENCH = json.loads(TRENCH_template)
+    #print(df['figure_tmpid'])
+    TRENCH["identifier"] = 'Findspot_refferedtoin_' + str(df['pub_key']) + '_' + str(df['pub_value'])
+    TRENCH["category"] = 'Trench'
+    json.dump(TRENCH, file)
+    file.write("\n")
+
+
 
 
 def create_tf_example(group):
@@ -424,8 +508,11 @@ pageid_raw = pageid_imgnp_mod.apply(pytesseract.image_to_string, config=pageid_c
 
 pageid_raw = pd.Series(pageid_raw, name='newinfo')
 
+
 bestpages_result = pd.concat([bestpages, pageid_raw], axis=1)
 all_detections_step3 = merge_info(all_detections_step2, bestpages_result)
+# %%
+#all_detections_step3 = all_detections_step3x.apply(ocrPostProcessing_Pageid, axis=1)
 # %%
 figures = filter_bestdetections(all_detections_step3, figureclasslist , 0.7 )
 
@@ -509,8 +596,31 @@ figures_step7 = pd.concat([bestfigid, figid_raw], axis=1)
 cols_to_use = figures_step7.columns.difference(figures_step4x.columns)
 
 figures_step8 = pd.merge(figures_step4x, figures_step7[cols_to_use], left_index=True, right_index=True, how='left')
+#figures_step8.to_json(r'catalog_out.jsonl')
+#figures_jsonl = figures_step8.to_json(orient='records', lines=True)
 
+with open(OUTPATH + 'catalogs.jsonl', 'w') as f:
+    pubs = figures_step8[['pub_key','pub_value']].drop_duplicates()
+    pubs.apply(createCATALOG_JSONL, file = f, axis = 1)
+with open(OUTPATH + 'trenches.jsonl', 'w') as f:
+    pubs = figures_step8[['pub_key','pub_value']].drop_duplicates()
+    pubs.apply(createTRENCH_JSONL, file = f, axis = 1)
+with open(OUTPATH + 'types.jsonl', 'w') as f:
+    figures_step8.apply(createTYPE_JSONL, file = f, axis = 1)
+with open(OUTPATH + 'finds.jsonl', 'w') as f:
+    figures_step8.apply(createFIND_JSONL, file = f, axis = 1)
+with open(OUTPATH + 'drawings.jsonl', 'w') as f:
+    figures_step8.apply(createDRAWING_JSONL, file = f, axis = 1)
+    #for i in figures_step8.index:
+        #FIND = createFIND_JSONL(figures_step8[i])
+        #f.write("%s\n" % FIND)
+    
 
+    
+#df['json'] = df.apply(lambda x: x.to_json(), axis=1)    
+
+#with jsonlines.open(, 'w') as outfile:
+            #outfile.write(figures_jsonl)
 
 # %%
 TFRECORDOUT = OUTPATH + 'mining_pages.tfrecord'
