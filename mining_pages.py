@@ -20,8 +20,7 @@ import cv2
 import pytesseract
 import shutil
 import json
-import jsonlines
-import re
+
 
 
 
@@ -31,12 +30,12 @@ import pandas as pd
 import tensorflow as tf
 
 from PIL import Image
-from object_detection.utils import dataset_util
+from object_detection.utils import dataset_util, label_map_util, ops
 from collections import namedtuple, OrderedDict
 
 # This is needed since the notebook is stored in the object_detection folder.
 sys.path.append("..")
-from object_detection.utils import ops as utils_ops
+
 
 if StrictVersion(tf.__version__) < StrictVersion('1.9.0'):
   raise ImportError('Please upgrade your TensorFlow installation to v1.9.* or later!')
@@ -46,7 +45,7 @@ if StrictVersion(tf.__version__) < StrictVersion('1.9.0'):
 # This is needed to display the images.
 
 
-from utils import label_map_util
+
 
 #from utils import visualization_utils as vis_util
 inputdirectory = '/home/images/apply'
