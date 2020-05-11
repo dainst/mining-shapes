@@ -1,0 +1,42 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387s
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: split_data",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/Code/Shape_Segmentation/split_cvat_data.py",
+            "args": ["--images","/home/images/source_imgs/",
+                     "--mask","/home/images/20_Binary_Ceramic_Shapes",
+                     "--output","/home/images/OUTPUT/CeramicDataset"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Train file",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/Code/Shape_Segmentation/train.py",
+            "args": [
+                "--train_data",
+                "/home/images/Ceramic_dataset/train",
+                "--train_annot",
+                "/home/images/Ceramic_dataset/trainannot/",
+                "--val_data",
+                "/home/images/Ceramic_dataset/val",
+                "--val_annot",
+                "/home/images/Ceramic_dataset/valannot/",
+                "--label_map",
+                "/home/images/Ceramic_dataset/labelmap.txt",
+                "--input_shape",
+                "256",
+                "256",
+                "--epochs",
+                "1"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}

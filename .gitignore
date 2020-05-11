@@ -1,8 +1,7 @@
 #directories to ignore
-.vscode/**
 **/__pycache__/**
 **/.ipynb_checkpoints/**
-
+vscode_remote/**
 
 #files to ignore
 .DS_Store

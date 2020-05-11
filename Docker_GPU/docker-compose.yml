@@ -20,4 +20,9 @@ services:
       - /home/michael/Desktop/inference_graph_mining_pages_v8:/home/models/inference_graph_mining_pages_v8
       - /home/michael/Desktop/inference_graph_figureid_v1:/home/models/inference_graph_figureid_v1
       - /home/michael/Desktop/ResultRecord:/home/images/OUTPUT
+    #vscode extensions
+    - ./Docker_CPU/vscode_remote/extensions/:/home/shape_miner/.vscode-server/extensions/
+    - ./Docker_CPU/vscode_remote/insiders/:/home/shape_miner/.vscode-server-insiders/extensions/
+    user: 1000:1000
     working_dir: /home/Code
+    tty: true

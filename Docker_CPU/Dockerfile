@@ -24,6 +24,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y protobuf-compiler python3-
     pip install pandas && \
     pip install pylint
 
+#to use keras plot_model function
+RUN pip install pydot && \
+    pip install graphviz && \
+    apt-get install -y graphviz
 
 # Install pycocoapi
 RUN git clone --depth 1 https://github.com/cocodataset/cocoapi.git && \
@@ -56,6 +60,16 @@ RUN python /models/research/object_detection/builders/model_builder_test.py
 #install segmentation models (see https://github.com/qubvel/segmentation_models)
 RUN pip install -U segmentation-models==0.2.1
 
+#add non root user to access locally data created in dev container 
+ARG USERNAME=shape_miner
+RUN useradd -ms /bin/bash  $USERNAME -u 1000
+USER $USERNAME
+# store vscode extensions installed in vscode devcontainer
+RUN mkdir -p /home/$USERNAME/.vscode-server/extensions \
+        /home/$USERNAME/.vscode-server-insiders/extensions \
+    && chown -R $USERNAME \
+        /home/$USERNAME/.vscode-server \
+        /home/$USERNAME/.vscode-server-insiders
 
 # Entrypoint
 WORKDIR /models/research/object_detection

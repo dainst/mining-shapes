@@ -20,4 +20,15 @@ services:
       - /home/michael/Desktop/inference_graph_mining_pages_v8:/home/models/inference_graph_mining_pages_v8
       - /home/michael/Desktop/inference_graph_figureid_v1:/home/models/inference_graph_figureid_v1
       - /home/michael/Desktop/ResultRecord:/home/images/OUTPUT
+      #segmentation model
+      - /home/michael/Desktop/Ceramic_dataset:/home/images/Ceramic_dataset
+      #split traindata
+      - /home/michael/Downloads/20_Binary_Ceramic_Shapes:/home/images/20_Binary_Ceramic_Shapes
+      - /home/michael/Downloads/miningshapes_cleaned/preliminary/results/:/home/images/source_imgs
+
+      #vscode extensions
+      - ../vscode_remote/extensions/:/home/shape_miner/.vscode-server/extensions/
+      - ../vscode_remote/insiders/:/home/shape_miner/.vscode-server-insiders/extensions/
+    user: 1000:1000
     working_dir: /home/Code
+    tty: true
