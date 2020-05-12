@@ -23,7 +23,18 @@ Access Docker shell. The container has to run for that.
 docker ps (to check COTAINER_ID)
 docker exec -it CONTAINER_ID bash
 ```
-Tip: Use VSCode with Remote Explorer extension for development.
+
+## Development with Visual Studio Code
+1. Install [Visual Studio Code](https://code.visualstudio.com/) with the following extensions:
+- [Remote Development](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack)
+- [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker)
+2. Open [devcontainer](.devcontainer/devcontainer.json) file and choose in entry "dockerComposeFile" the GPU or CPU container.
+3. Create following directories if you use a Linux OS:
+- vscode_remote/extensions
+- vscode_remote/bashhistory
+- vscode_remote/insiders
+4. In VSCodee press Shift+P and run "Remote-Containers:Rebuild and Reopen in Container" command.
+
 ## Cotainer filesystem
 Source code is located at /home/Code <br>
 Tensorflow objection detection API at /models/research/object_detection <br>
