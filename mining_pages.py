@@ -1,3 +1,4 @@
+# %%
 from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
@@ -392,18 +393,15 @@ def createTRENCH_JSONL(df, file):
 
 
 
-def create_tf_example(group):
-
-    path = group['page_path']
-
-    with tf.gfile.GFile(path, 'rb') as fid:
+def create_tf_example(group, path):
+    with tf.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
         encoded_jpg = fid.read()
-    #encoded_jpg_io = io.BytesIO(encoded_jpg)
-    #image = Image.open(encoded_jpg_io)
-    width = int(group['page_width'])
-    height = int(group['page_height'])
+    encoded_jpg_io = io.BytesIO(encoded_jpg)
+    image = Image.open(encoded_jpg_io)
+    width, height = image.size
+    
 
-    filename = group.page_path.encode('utf8')
+    filename = group.filename.encode('utf8')
     image_format = b'jpg'
     xmins = []
     xmaxs = []
@@ -411,17 +409,16 @@ def create_tf_example(group):
     ymaxs = []
     classes_text = []
     classes = []
-    
-    box = group['figid_detection_boxes']
-    ymin, xmin, ymax, xmax = box
 
     for index, row in group.object.iterrows():
-        xmins.append(row['xmin'] / width)
-        xmaxs.append(row['xmax'] / width)
-        ymins.append(row['ymin'] / height)
-        ymaxs.append(row['ymax'] / height)
-        classes_text.append(row['class'].encode('utf8'))
-        classes.append(class_text_to_int(row['class']))
+        box = row['detection_boxes']
+        ymin, xmin, ymax, xmax = box
+        xmins.append(xmin)
+        xmaxs.append(xmax)
+        ymins.append(ymin)
+        ymaxs.append(ymax)
+        classes_text.append(row['detection_classesname'].encode('utf8'))
+        classes.append(int(row['detection_classes']))
 
     tf_example = tf.train.Example(features=tf.train.Features(feature={
         'image/height': dataset_util.int64_feature(height),
@@ -439,6 +436,51 @@ def create_tf_example(group):
     }))
     return tf_example
 
+
+def create_tf_figid(group, path):
+    with tf.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
+        encoded_jpg = fid.read()
+    encoded_jpg_io = io.BytesIO(encoded_jpg)
+    image = Image.open(encoded_jpg_io)
+    width, height = image.size
+    
+
+    filename = group.filename.encode('utf8')
+    image_format = b'png'
+    xmins = []
+    xmaxs = []
+    ymins = []
+    ymaxs = []
+    classes_text = []
+    classes = []
+
+
+    for index, row in group.object.iterrows():
+        box = row['figid_detection_boxes']
+        ymin, xmin, ymax, xmax = box
+        xmins.append(xmin)
+        xmaxs.append(xmax)
+        ymins.append(ymin)
+        ymaxs.append(ymax)
+        classes_text.append(row['figid_detection_classesname'].encode('utf8'))
+        classes.append(int(row['figid_detection_classes']))
+
+    tf_example = tf.train.Example(features=tf.train.Features(feature={
+        'image/height': dataset_util.int64_feature(height),
+        'image/width': dataset_util.int64_feature(width),
+        'image/filename': dataset_util.bytes_feature(filename),
+        'image/source_id': dataset_util.bytes_feature(filename),
+        'image/encoded': dataset_util.bytes_feature(encoded_jpg),
+        'image/format': dataset_util.bytes_feature(image_format),
+        'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),
+        'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
+        'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
+        'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
+        'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
+        'image/object/class/label': dataset_util.int64_list_feature(classes),
+    }))
+    return tf_example
+# %%
 classlist= ['pageid', 'pageinfo']
 figureclasslist= ['vesselprofilefigure']
 figureidclasslist= ['figureid']
@@ -449,7 +491,6 @@ pagelist = pagelist.apply(load_page, axis=1)
 
 
 
-# %%
 detection_graph = tf.Graph()
 with detection_graph.as_default():
   od_graph_def = tf.GraphDef()
@@ -492,7 +533,7 @@ pagelist = pagelist.drop(columns='page_imgnp')
 output_dict = pd.DataFrame(output_dict_raw.tolist()).reindex(output_dict_raw.index)
 pagelist = pd.concat([pagelist, output_dict], axis=1)
 all_detections_step1 = extract_detections_page(pagelist)
-# %%
+
 category_index = get_labelmap_as_df(PAGE_MODEL + LABELS)
 all_detections_step2 = all_detections_step1.merge(category_index, on=['detection_classes'], how='left')
 
@@ -504,15 +545,16 @@ pageid_imgnp = bestpages.apply(cut_image, axis=1)
 pageid_imgnp_mod = pageid_imgnp.apply(ocrPreProcessing)
 
 pageid_raw = pageid_imgnp_mod.apply(pytesseract.image_to_string, config=pageid_config)
+pageid_raw.rename("newinfo", inplace=True)
 
-pageid_raw = pd.Series(pageid_raw, name='newinfo')
+
 
 
 bestpages_result = pd.concat([bestpages, pageid_raw], axis=1)
 all_detections_step3 = merge_info(all_detections_step2, bestpages_result)
-# %%
+
 #all_detections_step3 = all_detections_step3x.apply(ocrPostProcessing_Pageid, axis=1)
-# %%
+
 figures = filter_bestdetections(all_detections_step3, figureclasslist , 0.7 )
 
 figures_step1 = figures.apply(cut_image_savetemp, axis=1)
@@ -562,9 +604,9 @@ except Exception as e:
 
 
 figures_step3 = figures_step2.drop(columns='figure_imgnp')
-# %%
-figures_output_dict = pd.DataFrame(figures_output_dict_raw.tolist()).add_prefix('figid_').reindex(figures_output_dict_raw.index)
 
+figures_output_dict = pd.DataFrame(figures_output_dict_raw.tolist()).add_prefix('figid_').reindex(figures_output_dict_raw.index)
+# %%
 figures_step4 = pd.concat([figures_step3, figures_output_dict], axis=1)
 
 
@@ -576,25 +618,26 @@ figures_detections = extract_detections_figureid(figures_step4)
 figures_step4x = figures_step4.drop(columns=['figid_detection_boxes','figid_detection_scores','figid_detection_classes','figid_num_detections'])
 figures_step5 = figures_detections.merge(figures_step4x, on=['pub_key','pub_value', 'page_imgname','figure_tmpid'], how='left')
 figid_category_index = get_figid_labelmap_as_df(FIGID_MODEL + LABELS)
-#figures_step5x =figures_step.drop(columns='figure_imgnp')
+
 figures_step6 = figures_step5.merge(figid_category_index, on=['figid_detection_classes'], how='left')
 
 
 
 bestfigid = filter_bestdetections_figid(figures_step6, figureidclasslist , 0.6 )
-# %%
+
 figid_imgnp = bestfigid.apply(cut_image_figid, axis=1)
 
 figid_imgnp_mod = figid_imgnp.apply(ocrPreProcessing)
-# %%
+
 figid_raw = figid_imgnp_mod.apply(pytesseract.image_to_string, config=pageid_config)
 
 figid_raw = pd.Series(figid_raw, name='figid_raw')
-# %%
-figures_step7 = pd.concat([bestfigid, figid_raw], axis=1)
-cols_to_use = figures_step7.columns.difference(figures_step4x.columns)
 
-figures_step8 = pd.merge(figures_step4x, figures_step7[cols_to_use], left_index=True, right_index=True, how='left')
+figures_step7 = pd.concat([bestfigid, figid_raw], axis=1)
+#df.join(other.set_index('key'), on='key')
+
+
+figures_step8 = figures_step4x.merge(figures_step7[['pub_key','pub_value','page_imgname','figure_tmpid','figid_raw']], on=['pub_key','pub_value','page_imgname','figure_tmpid'], how='left')
 #figures_step8.to_json(r'catalog_out.jsonl')
 #figures_jsonl = figures_step8.to_json(orient='records', lines=True)
 
@@ -625,14 +668,30 @@ with open(OUTPATH + 'drawings.jsonl', 'w') as f:
 TFRECORDOUT = OUTPATH + 'mining_pages.tfrecord'
 writer = tf.python_io.TFRecordWriter(TFRECORDOUT )
 
-shutil.copyfile(PAGE_MODEL + LABELS, OUTPATH + 'mining_pages_label_map.pbtxt' )
-shutil.copyfile(FIGID_MODEL + LABELS, OUTPATH + 'figid_label_map.pbtxt' )
+shutil.copyfile(PAGE_MODEL + LABELS, OUTPATH + 'pages_label_map.pbtxt' )
 
-#grouped = split(figures_step7, 'page_path')
-TFRECORDOUT = OUTPATH + 'mining_pages.tfrecord'
-tf_example = figures_step8.apply(create_tf_example, axis=1)
-writer.write(tf_example.SerializeToString())
-   
-writer.close()               
+mining_pages_detections = figures_step8.append(bestpages)
+grouped = split(mining_pages_detections, 'page_path')
+
+for group in grouped:
+    tf_example = create_tf_example(group,  TFRECORDOUT)
+    writer.write(tf_example.SerializeToString())
+  
+writer.close()
+
+TFRECORDOUT = OUTPATH + 'mining_figures.tfrecord'
+writer = tf.python_io.TFRecordWriter(TFRECORDOUT )
+
+shutil.copyfile(FIGID_MODEL + LABELS, OUTPATH + 'figures_label_map.pbtxt' )
+figsgrouped = split(figures_step8, 'figure_path')
+
+for group in figsgrouped:
+    figtf_example = create_tf_figid(group,  TFRECORDOUT)
+    writer.write(figtf_example.SerializeToString())
+  
+writer.close() 
 
 
+
+
+# %%
