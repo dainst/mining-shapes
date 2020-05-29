@@ -62,8 +62,8 @@ class DataGenerator(keras.utils.Sequence):
 
         return x
 
-    @staticmethod
-    def create_keypoint_dict(keypoint_file: str) -> Dict:
+    @classmethod
+    def create_keypoint_dict(cls,keypoint_file: str) -> Dict:
         """
         Read cvat xml file and creates dictionary with keypoints
         """
@@ -72,7 +72,7 @@ class DataGenerator(keras.utils.Sequence):
             x, y, *rest = coord.replace(";", ",").split(",")
             # if rest:
             #    continue
-            return Point(int(float(x)), int(float(y)))
+            return Point(float(x), float(y))
 
         xmldoc = minidom.parse(keypoint_file)
         imagelist = xmldoc.getElementsByTagName("image")
@@ -80,13 +80,21 @@ class DataGenerator(keras.utils.Sequence):
         for image in imagelist:
             temp = {}
             entry = image.attributes["name"].value
+            height = int(image.attributes["height"].value)
+            width = int(image.attributes["width"].value)
             for point in image.getElementsByTagName("points"):
-                temp[point.attributes["label"].value] = str_coord_to_namedtuple(
-                    point.attributes["points"].value
-                )
+                temp[point.attributes["label"].value] = DataGenerator.normalize_coords(
+                    height,
+                    width,
+                    str_coord_to_namedtuple(point.attributes["points"].value))
+                
             out[entry] = temp
 
         return out
+
+    @staticmethod
+    def normalize_coords(height: int, width: int, coords):
+        return Point(x=coords.x / width,y=coords.y / height) 
 
     def _remove_images_without_keypoints(self):
         """
@@ -121,7 +129,6 @@ class DataGenerator(keras.utils.Sequence):
 
         return np.array(images), heatmaps
 
-
     def _create_heatmaps(self, batch_images: List) -> np.ndarray:
         """
         @brief generate heatmaps
@@ -133,10 +140,11 @@ class DataGenerator(keras.utils.Sequence):
             keypoint_coords = self._keypoints[os.path.basename(img_name)]
             coords = np.zeros((3, 2), dtype=np.int)
             for i, (x, y) in enumerate(keypoint_coords.values()):
-                coords[i] = x, y
+                coords[i] = int(x*width), int(y*height)
             out[img_i] = generate_heatmap(height, width, coords, sigma=2)
 
         return out
+
     def _read_and_resize_image(self, file_name: str) -> np.ndarray:
         """
         @brief reads and resizes an image
