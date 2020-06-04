@@ -22,9 +22,12 @@ def generate_heatmap(height:int, width:int ,landmarks:np.ndarray,sigma=2):
     Nlandmarks = len(landmarks)
     hm = np.zeros((height, width, Nlandmarks), dtype = np.float32)
     for i in range(Nlandmarks):
-        hm[:,:,i] = gaussian_k(landmarks[i][0],
-                                landmarks[i][1],
-                                sigma,height=height, width=width)
+        if landmarks[i][0] == 0 and landmarks[i][1] == 0:
+            hm[:,:,i] = np.zeros((height, width))
+        else:
+            hm[:,:,i] = gaussian_k(landmarks[i][0],
+                                    landmarks[i][1],
+                                    sigma,height=height, width=width)
     return hm
 
 
