@@ -43,36 +43,32 @@ with detection_graph.as_default():
         tf.import_graph_def(od_graph_def, name='')
 
 
-try:
-    with detection_graph.as_default():
-        with tf.Session() as sess:
-            # Get handles to input and output tensors
-            ops = tf.get_default_graph().get_operations()
-            all_tensor_names = {
-                output.name for op in ops for output in op.outputs}
-            tensor_dict = {}
-            for key in [
-                'num_detections', 'detection_boxes', 'detection_scores',
-                'detection_classes', 'detection_masks'
-            ]:
-                tensor_name = key + ':0'
-                if tensor_name in all_tensor_names:
-                    tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
-                        tensor_name)
-            e = 0
+with detection_graph.as_default():
+    with tf.Session() as sess:
+        # Get handles to input and output tensors
+        ops = tf.get_default_graph().get_operations()
+        all_tensor_names = {
+            output.name for op in ops for output in op.outputs}
+        tensor_dict = {}
+        for key in [
+            'num_detections', 'detection_boxes', 'detection_scores',
+            'detection_classes', 'detection_masks'
+        ]:
+            tensor_name = key + ':0'
+            if tensor_name in all_tensor_names:
+                tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
+                    tensor_name)
+        e = 0
 
-            all_detections_step1 = pd.DataFrame()
+        all_detections_step1 = pd.DataFrame()
 
-            for index, row in pagelist.iterrows():
+        for index, row in pagelist.iterrows():
 
-                img = load_page(row)
-                result = run_inference_for_series(img, tensor_dict, sess)
-                result.drop("page_imgnp", inplace=True)
-                all_detections_step1 = all_detections_step1.append(result)
+            img = load_page(row)
+            result = run_inference_for_series(img, tensor_dict, sess)
+            result.drop("page_imgnp", inplace=True)
+            all_detections_step1 = all_detections_step1.append(result)
 
-
-except Exception as e:
-    print(e)
 
 category_index = get_labelmap_as_df(PAGE_MODEL + LABELS)
 all_detections_step2 = extract_detections_page(
@@ -105,38 +101,35 @@ with detection_figureid_graph.as_default():
         od_graph_def.ParseFromString(serialized_graph)
         tf.import_graph_def(od_graph_def, name='')
 
-try:
-    with detection_figureid_graph.as_default():
-        with tf.Session() as sess:
-            # Get handles to input and output tensors
-            ops = tf.get_default_graph().get_operations()
-            all_tensor_names = {
-                output.name for op in ops for output in op.outputs}
 
-            tensor_dict = {}
-            for key in [
-                'num_detections', 'detection_boxes', 'detection_scores',
-                'detection_classes', 'detection_masks'
-            ]:
-                tensor_name = key + ':0'
-                if tensor_name in all_tensor_names:
-                    tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
-                        tensor_name)
-            e = 0
+with detection_figureid_graph.as_default():
+    with tf.Session() as sess:
+        # Get handles to input and output tensors
+        ops = tf.get_default_graph().get_operations()
+        all_tensor_names = {
+            output.name for op in ops for output in op.outputs}
 
-            figures_step1 = pd.DataFrame()
+        tensor_dict = {}
+        for key in [
+            'num_detections', 'detection_boxes', 'detection_scores',
+            'detection_classes', 'detection_masks'
+        ]:
+            tensor_name = key + ':0'
+            if tensor_name in all_tensor_names:
+                tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
+                    tensor_name)
+        e = 0
 
-            for index, row in figures.iterrows():
+        figures_step1 = pd.DataFrame()
 
-                img = cut_image_savetemp(row, OUTPATH)
-                result = run_inference_for_figureseries(
-                    img, tensor_dict, sess)
-                result.drop("figure_imgnp", inplace=True)
-                figures_step1 = figures_step1.append(result)
+        for index, row in figures.iterrows():
 
+            img = cut_image_savetemp(row, OUTPATH)
+            result = run_inference_for_figureseries(
+                img, tensor_dict, sess)
+            result.drop("figure_imgnp", inplace=True)
+            figures_step1 = figures_step1.append(result)
 
-except Exception as e:
-    print(e)
 
 figid_category_index = get_figid_labelmap_as_df(FIGID_MODEL + LABELS)
 figid_detections = figures_step1.apply(
