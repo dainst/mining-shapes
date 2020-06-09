@@ -764,7 +764,7 @@ with open(OUTPATH + 'drawings.jsonl', 'w') as f:
             #outfile.write(figures_jsonl)
 
 TFRECORDOUT = OUTPATH + 'mining_pages.tfrecord'
-writer = tf.python_io.TFRecordWriter(TFRECORDOUT )
+writer = tf.io.TFRecordWriter(TFRECORDOUT )
 
 shutil.copyfile(PAGE_MODEL + LABELS, OUTPATH + 'pages_label_map.pbtxt' )
 
@@ -778,7 +778,7 @@ for group in grouped:
 writer.close()
 
 TFRECORDOUT = OUTPATH + 'mining_figures.tfrecord'
-writer = tf.python_io.TFRecordWriter(TFRECORDOUT )
+writer = tf.io.TFRecordWriter(TFRECORDOUT )
 
 shutil.copyfile(FIGID_MODEL + LABELS, OUTPATH + 'figures_label_map.pbtxt' )
 figids = figures_step3[figures_step3.figid_detection_boxes.notnull()]
