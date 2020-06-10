@@ -1,11 +1,16 @@
 import tensorflow as tf
+from tensorflow import keras
 import io
 import os
+import math
+import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
 
+
 from object_detection.utils import dataset_util, ops
+import segmentation_models as sm
 
 
 def create_tf_example(group, path):
@@ -178,3 +183,47 @@ def run_inference(tensor_dict: dict, image: np.ndarray, session: tf.compat.v1.Se
                               feed_dict={image_tensor: np.expand_dims(image, 0)})
 
     return output_dict
+
+
+def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath: str) -> None:
+    """
+    @brief performs segmentation of vesselprofile images
+    @param vesselpath directory of vesselprofile images
+    @param path to store segmented images
+    @param modelpath location of saved model weights. Weights should be stored in .h5 format
+    """
+    vessel_image_list = os.listdir(vesselpath)
+    foreground_channel = 1
+
+    # load pretrained model
+    seg_model = sm.Unet('resnet34', encoder_weights='imagenet', input_shape=(
+        None, None, 3), classes=2, encoder_freeze=True)
+    seg_model.load_weights(modelpath)
+
+    # predict segmentations and store to segmentpath
+    prog_bar = keras.utils.Progbar(
+        len(vessel_image_list)-1, width=30, verbose=1, interval=0.5, unit_name='step')
+
+    for i, img_name in enumerate(vessel_image_list):
+        image = cv2.imread(os.path.join(
+            vesselpath, img_name), cv2.IMREAD_COLOR)
+        height_orig, width_orig, *_ = image.shape
+        image = resize_image_to_closest_2_power(image)
+        segmented_img = seg_model.predict(image[np.newaxis, ...])
+        cv2.imwrite(os.path.join(segmentpath, img_name), cv2.resize(
+            segmented_img[0, :, :, foreground_channel]*255, (width_orig, height_orig)))
+        prog_bar.update(i)
+
+
+def resize_image_to_closest_2_power(in_image: np.ndarray) -> np.ndarray:
+    """
+    @brief resizes input image to closest 2**x size
+    @param image input image
+    """
+    def closest_2power_value(value):
+        return 2**round(math.log(value, 2))
+
+    height, width, *_ = in_image.shape
+    n_height = closest_2power_value(height)
+    n_width = closest_2power_value(width)
+    return cv2.resize(in_image, (n_width, n_height))

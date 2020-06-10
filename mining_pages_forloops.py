@@ -13,16 +13,19 @@ from mining_pages_utils.image_ocr_utils import load_page, cut_image, ocr_pre_pro
 from mining_pages_utils.dataframe_utils import get_page_labelmap_as_df, get_figid_labelmap_as_df, extract_page_detections, extract_detections_figureidv2
 from mining_pages_utils.dataframe_utils import filter_best_page_detections, filter_best_vesselprofile_detections, merge_info, split, provide_pagelist
 from mining_pages_utils.json_utils import create_find_JSONL, create_type_JSONL, create_drawing_JSONL, create_catalog_JSONL, create_trench_JSONL
-from mining_pages_utils.tensorflow_utils import create_tf_example, create_tf_figid, run_inference_for_page_series, run_inference_for_figure_series
+from mining_pages_utils.tensorflow_utils import create_tf_example, create_tf_figid, run_inference_for_page_series, run_inference_for_figure_series, run_vesselprofile_segmentation
+
 
 INPUTDIRECTORY = '/home/images/apply'
 GRAPH = '/frozen_inference_graph.pb'
 LABELS = '/label_map.pbtxt'
 PAGE_MODEL = '/home/models/inference_graph_mining_pages_v8'
 FIGID_MODEL = '/home/models/inference_graph_figureid_v1'
+SEG_MODEL = 'Shape_Segmentation/train_colab_20200610.h5'
 OUTPATH = '/home/images/OUTPUT/'
 VESSELLPATH = OUTPATH + 'vesselprofiles/'
-CSVOUT = OUTPATH + 'mining_pages_allinfo.csv'CSVOUT = OUTPATH + 'mining_pages_allinfo.csv'
+SEGMENTPATH = OUTPATH + 'segmented_profiles/'
+CSVOUT = OUTPATH + 'mining_pages_allinfo.csv'
 
 classlist = ['pageid', 'pageinfo']
 figureclasslist = ['vesselprofilefigure']
@@ -36,8 +39,9 @@ if StrictVersion(tf.version.VERSION) < StrictVersion('1.9.0'):
     raise ImportError(
         'Please upgrade your TensorFlow installation to v1.9.* or later!')
 
-if not os.path.exists(VESSELLPATH):
-    os.makedirs(VESSELLPATH)
+for path in [VESSELLPATH, SEGMENTPATH]:
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 detection_graph = tf.Graph()
 with detection_graph.as_default():
@@ -184,5 +188,9 @@ for group in figsgrouped:
     writer.write(figtf_example.SerializeToString())
 
 writer.close()
-CSVOUT = OUTPATH + 'mining_pages_allinfo.csv'
 figures_step3.to_csv(CSVOUT)
+
+#Profile segmentation
+print('Perform image segmentation')
+run_vesselprofile_segmentation(VESSELLPATH, SEGMENTPATH, SEG_MODEL)
+
