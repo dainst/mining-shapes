@@ -7,37 +7,42 @@ import pytesseract
 import shutil
 import tensorflow as tf
 import pandas as pd
+import os
 
 from mining_pages_utils.image_ocr_utils import load_page, cut_image, ocr_pre_processing, cut_image_savetemp, cut_image_figid
-from mining_pages_utils.dataframe_utils import get_labelmap_as_df, get_figid_labelmap_as_df, extract_detections_page, extract_detections_figureidv2
-from mining_pages_utils.dataframe_utils import filter_bestdetections_max1, filter_bestdetections, merge_info, split, provide_pagelist
+from mining_pages_utils.dataframe_utils import get_page_labelmap_as_df, get_figid_labelmap_as_df, extract_page_detections, extract_detections_figureidv2
+from mining_pages_utils.dataframe_utils import filter_best_page_detections, filter_best_vesselprofile_detections, merge_info, split, provide_pagelist
 from mining_pages_utils.json_utils import create_find_JSONL, create_type_JSONL, create_drawing_JSONL, create_catalog_JSONL, create_trench_JSONL
-from mining_pages_utils.tensorflow_utils import create_tf_example, create_tf_figid, run_inference_for_series, run_inference_for_figureseries
+from mining_pages_utils.tensorflow_utils import create_tf_example, create_tf_figid, run_inference_for_page_series, run_inference_for_figure_series
 
-
-if StrictVersion(tf.VERSION) < StrictVersion('1.9.0'):
-    raise ImportError(
-        'Please upgrade your TensorFlow installation to v1.9.* or later!')
-
-inputdirectory = '/home/images/apply'
+INPUTDIRECTORY = '/home/images/apply'
 GRAPH = '/frozen_inference_graph.pb'
 LABELS = '/label_map.pbtxt'
 PAGE_MODEL = '/home/models/inference_graph_mining_pages_v8'
 FIGID_MODEL = '/home/models/inference_graph_figureid_v1'
 OUTPATH = '/home/images/OUTPUT/'
+VESSELLPATH = OUTPATH + 'vesselprofiles/'
+CSVOUT = OUTPATH + 'mining_pages_allinfo.csv'CSVOUT = OUTPATH + 'mining_pages_allinfo.csv'
 
 classlist = ['pageid', 'pageinfo']
 figureclasslist = ['vesselprofilefigure']
 figureidclasslist = ['figureid']
 pageid_config = r'--psm 6 -c load_system_dawg=0 load_freq_dawg=0'
-pagelist = []
-pagelist = provide_pagelist(inputdirectory, pagelist)
+pagelist = provide_pagelist(INPUTDIRECTORY)
 
+
+
+if StrictVersion(tf.version.VERSION) < StrictVersion('1.9.0'):
+    raise ImportError(
+        'Please upgrade your TensorFlow installation to v1.9.* or later!')
+
+if not os.path.exists(VESSELLPATH):
+    os.makedirs(VESSELLPATH)
 
 detection_graph = tf.Graph()
 with detection_graph.as_default():
-    od_graph_def = tf.GraphDef()
-    with tf.gfile.GFile(PAGE_MODEL + GRAPH, 'rb') as fid:
+    od_graph_def = tf.compat.v1.GraphDef()
+    with tf.io.gfile.GFile(PAGE_MODEL + GRAPH, 'rb') as fid:
         serialized_graph = fid.read()
         od_graph_def.ParseFromString(serialized_graph)
         tf.import_graph_def(od_graph_def, name='')
@@ -58,45 +63,39 @@ with detection_graph.as_default():
             if tensor_name in all_tensor_names:
                 tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
                     tensor_name)
-        e = 0
 
         all_detections_step1 = pd.DataFrame()
 
         for index, row in pagelist.iterrows():
 
             img = load_page(row)
-            result = run_inference_for_series(img, tensor_dict, sess)
+            result = run_inference_for_page_series(img, tensor_dict, sess)
             result.drop("page_imgnp", inplace=True)
             all_detections_step1 = all_detections_step1.append(result)
 
 
-category_index = get_labelmap_as_df(PAGE_MODEL + LABELS)
-all_detections_step2 = extract_detections_page(
-    all_detections_step1, category_index=category_index)
+all_detections_step2 = extract_page_detections(
+    all_detections_step1, category_index=get_page_labelmap_as_df(PAGE_MODEL + LABELS))
 
-bestpages = filter_bestdetections_max1(all_detections_step2, classlist, 0.7)
-
+bestpages = filter_best_page_detections(all_detections_step2, classlist, lowest_score=0.7)
 pageid_raw = pd.DataFrame()
-for index, row in bestpages.iterrows():
 
+#perform ocr page number
+for index, row in bestpages.iterrows():
     img = cut_image(row)
     img2 = ocr_pre_processing(img)
     result = pytesseract.image_to_string(img2, config=pageid_config)
     row['newinfo'] = result
-
     pageid_raw = pageid_raw.append(row)
 
-
-#bestpages_result = pd.concat([bestpages, pageid_raw], axis=1)
 all_detections_step3 = merge_info(all_detections_step2, pageid_raw)
+figures = filter_best_vesselprofile_detections(all_detections_step3, figureclasslist,lowest_score= 0.7)
 
-figures = filter_bestdetections(all_detections_step3, figureclasslist, 0.7)
-
-
+#detect figure id
 detection_figureid_graph = tf.Graph()
 with detection_figureid_graph.as_default():
-    od_graph_def = tf.GraphDef()
-    with tf.gfile.GFile(FIGID_MODEL + GRAPH, 'rb') as fid:
+    od_graph_def = tf.compat.v1.GraphDef()
+    with tf.io.gfile.GFile(FIGID_MODEL + GRAPH, 'rb') as fid:
         serialized_graph = fid.read()
         od_graph_def.ParseFromString(serialized_graph)
         tf.import_graph_def(od_graph_def, name='')
@@ -118,14 +117,12 @@ with detection_figureid_graph.as_default():
             if tensor_name in all_tensor_names:
                 tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
                     tensor_name)
-        e = 0
 
         figures_step1 = pd.DataFrame()
 
         for index, row in figures.iterrows():
-
-            img = cut_image_savetemp(row, OUTPATH)
-            result = run_inference_for_figureseries(
+            img = cut_image_savetemp(row, VESSELLPATH)
+            result = run_inference_for_figure_series(
                 img, tensor_dict, sess)
             result.drop("figure_imgnp", inplace=True)
             figures_step1 = figures_step1.append(result)
@@ -137,7 +134,7 @@ figid_detections = figures_step1.apply(
 figures_step2 = figid_detections.merge(
     figid_category_index, on=['figid_detection_classes'], how='left')
 
-
+#perform ocr figid
 figures_step3 = pd.DataFrame()
 for index, row in figures_step2.iterrows():
     img = cut_image_figid(row)

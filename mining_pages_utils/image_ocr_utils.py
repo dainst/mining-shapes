@@ -5,6 +5,10 @@ import pandas as pd
 
 
 def cut_image(dataframe: pd.DataFrame) -> np.ndarray:
+    """
+    @brief Select an ROI from image
+    @param dataframe dataframe with image and ROI metadata
+    """
     page_imgnp = cv2.imread(dataframe['page_path'])
     box = dataframe['detection_boxes']
     ymin, xmin, ymax, xmax = box
@@ -17,7 +21,11 @@ def cut_image(dataframe: pd.DataFrame) -> np.ndarray:
     return bbox_np
 
 
-def cut_image_savetemp(dataframe: pd.DataFrame, outpath: str) -> pd.DataFrame:
+def cut_image_savetemp(dataframe: pd.DataFrame, outpath_base: str) -> pd.DataFrame:
+    """
+    @brief Select an ROI from image and writes detected vesselprofile to disk
+    @param dataframe dataframe with image and ROI metadata
+    """
     page_imgnp = cv2.imread(dataframe['page_path'])
     box = dataframe['detection_boxes']
     ymin, xmin, ymax, xmax = box
@@ -32,7 +40,7 @@ def cut_image_savetemp(dataframe: pd.DataFrame, outpath: str) -> pd.DataFrame:
     dataframe['figure_channel'] = figure_channel
     dataframe['figure_imgnp'] = bbox_np
     dataframe['figure_tmpid'] = dataframe.name
-    dataframe['figure_path'] = outpath + str(dataframe['pub_key']) + '_' + str(
+    dataframe['figure_path'] = outpath_base + str(dataframe['pub_key']) + '_' + str(
         dataframe['pub_value']) + '_' + 'tempid' + str(dataframe['figure_tmpid']) + '.png'
     cv2.imwrite(str(dataframe['figure_path']), bbox_np)
 
@@ -53,29 +61,47 @@ def cut_image_figid(dataframe: pd.DataFrame) -> np.ndarray:
 
 
 def load_figure(series: pd.Series) -> pd.Series:
-    figure_imgnp = cv2.imread(str(series['figure_path']))
-    figure_height, figure_width, figure_channel = figure_imgnp.shape
-    series['figure_width'] = figure_width
-    series['figure_height'] = figure_height
-    series['figure_channel'] = figure_channel
-    series['figure_imgnp'] = figure_imgnp
-
-    return series
+    """
+    @brief Loads figure image from given series
+    @return Series with page data  
+    """
+    return load_image_from_pdseries(series, 'figure_path', 'figure')
 
 
 def load_page(series: pd.Series) -> pd.Series:
-    page_imgnp = cv2.imread(str(series['page_path']))
+    """
+    @brief Loads page image from given series
+    @return Series with page data
+    """
+    return load_image_from_pdseries(series, 'page_path', 'page')
 
+
+def load_image_from_pdseries(series: pd.Series, column_name: str, col_base_name: str):
+    """
+    @brief Loads image from path given in pd series
+    @param series pandas Series
+    @param column_name column in which image path is written in series
+    @param col_base_name base name for column name for returned pandas series
+    @return pdSeries which in includes image data and image dimensions
+    """
+    page_imgnp = cv2.imread(str(series[column_name]))
+    assert len(page_imgnp.shape) == 3
     page_height, page_width, page_channel = page_imgnp.shape
-    series['page_width'] = page_width
-    series['page_height'] = page_height
-    series['page_channel'] = page_channel
-    series['page_imgnp'] = page_imgnp
+    series[f'{col_base_name}_width'] = page_width
+    series[f'{col_base_name}_height'] = page_height
+    series[f'{col_base_name}_channel'] = page_channel
+    series[f'{col_base_name}_imgnp'] = page_imgnp
 
     return series
 
 
+
 def ocr_pre_processing(image: np.ndarray) -> np.ndarray:
+    """
+    @brief applies adaptive thresholding to preprocess image for   
+            optical character recognition 
+    @param image image to be preprocessed
+    """
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     image = cv2.medianBlur(image, 5)
     image = cv2.adaptiveThreshold(
