@@ -29,7 +29,7 @@ def train_model(args):
         os.makedirs(save_dir)
 
 
-    model = sm.Unet(backbone, encoder_weights='imagenet', input_shape=(*(image_size),3), classes=2, encoder_freeze=True)
+    model = sm.Unet(backbone, encoder_weights='imagenet', input_shape=(None,None,3), classes=2, encoder_freeze=True)
     model.compile(
         'Adam',
         loss=sm.losses.bce_jaccard_loss,
