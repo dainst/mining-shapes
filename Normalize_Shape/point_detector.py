@@ -21,7 +21,7 @@ class PointDetector:
     @param image_data DataGeneratorInputs namedtuple with image path and path of points exported as CVAT xml
     @param val_data DataGeneratorInputs namedtuple with val image path and path of points exported as CVAT xml
     @param input_shape shape of input data (height, width, channels). Should be a RGB image because resnet is trained 
-            on RGB dat
+            on RGB dat. Only used for training. Prediction can be done with arbitrarly width and height
     @param batch_size batch size
     @simga standard deviation of Gaussian heatmap 
     @save_dir directory to save trained model and training stats
@@ -69,7 +69,7 @@ class PointDetector:
         @return keras Model
         """
         base_model = keras.applications.ResNet50(
-            include_top=False, weights="imagenet", input_shape=self._input_shape
+            include_top=False, weights="imagenet", input_shape=(None, None, 3)
         )
 
         input_ = base_model.input
@@ -178,4 +178,3 @@ class PointDetector:
     @model.setter
     def model(self, value):
         self._model = value
-
