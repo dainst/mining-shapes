@@ -1,6 +1,7 @@
 import os
 import pytz
 import datetime
+import numpy as np
 from typing import Tuple
 from tensorflow import keras
 from collections import namedtuple
@@ -90,7 +91,7 @@ class PointDetector:
         )(x)
         out_model = keras.models.Model(input_, x)
 
-        #freeze basemodel layers
+        # freeze basemodel layers
         for layer in out_model.layers:
             if layer.name == "stage0_convT":
                 break
@@ -126,7 +127,7 @@ class PointDetector:
         @param optimizer keras optimizer to train network
         """
         self.model.compile(optimizer=optimizer, loss="mse",
-                            metrics=["mae", "mse"])
+                           metrics=["mae", "mse"])
 
     def fit(self, epochs: int = 40):
         """
@@ -167,11 +168,14 @@ class PointDetector:
     def summary(self):
         self.model.summary()
 
+    def predict(self, data_generator: DataGenerator) -> np.ndarray:
+        return self._model.predict_generator(data_generator)
+
     @property
     def model(self):
         return self._model
 
     @model.setter
-    def model(self,value):
+    def model(self, value):
         self._model = value
 
