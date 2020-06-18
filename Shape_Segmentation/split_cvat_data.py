@@ -77,6 +77,7 @@ def split_data(args):
     images = create_image_list(images_p, masks)
 
     assert len(masks) == len(images)
+    assert len(images) > 1500, "Not enough data to trian network"
     #sort
     masks.sort()
     images.sort()
@@ -86,17 +87,17 @@ def split_data(args):
     random.shuffle(masks, lambda: .5)
 
     #split data
-    train = images[:1370]
-    train_a = masks[:1370]
-    assert len(train) == len(train_a)
-
-    test = images[1370:1670]
-    test_a = masks[1370:1670]
+    test = images[:300]
+    test_a = masks[:300]
     assert len(test) == len(test_a)
 
-    val = images[1670:]
-    val_a = masks[1670:]
+    val = images[300:500]
+    val_a = masks[300:500]
     assert len(val) == len(val_a)
+
+    train = images[500:]
+    train_a = masks[500:]
+    assert len(train) == len(train_a)
 
     #assert correct splitting
     assert len(np.unique([os.path.basename(train[i]) == os.path.basename(train_a[i]) for i in range(len(val_a))])) == 1 
