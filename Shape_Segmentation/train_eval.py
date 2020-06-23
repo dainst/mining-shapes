@@ -7,6 +7,8 @@ import argparse
 import segmentation_models as sm
 from datagenerator import DataGenerator
 import datetime
+import pytz
+import keras
 import os
 import pickle
 
@@ -34,6 +36,7 @@ def train_model(_args):
         loss=sm.losses.bce_jaccard_loss,
         metrics=[sm.metrics.iou_score],
     )
+    # set data generators
     path_train = _args.train_data
     path_train_a = _args.train_annot
     label_map = _args.label_map
@@ -44,9 +47,17 @@ def train_model(_args):
     path_val_a = _args.val_annot
     val_gen = DataGenerator(path_val, path_val_a, label_map,
                             image_size=image_size, batch_size=batch_size, augment_data=False)
+    # set tensorboard callback
+    run_logdir = os.path.join(
+        save_dir,
+        datetime.datetime.now(pytz.timezone("Europe/Berlin")).strftime(
+            "%Y%m%d-%H%M%S"))
+    tensorboard_cb = keras.callbacks.TensorBoard(
+        run_logdir, histogram_freq=1, update_freq='epoch')
 
+    # train model
     history = model.fit_generator(
-        gen, validation_data=val_gen, verbose=1, epochs=epochs)
+        gen, validation_data=val_gen, verbose=1, epochs=epochs, callbacks=[tensorboard_cb])
     save_str = os.path.join(
         save_dir, f'training_{backbone}_{image_size[0]}_{image_size[1]}_epochs_{epochs}_{datetime.date.today()}.h5')
     print(save_str)
@@ -59,8 +70,7 @@ def train_model(_args):
     eval_gen = DataGenerator(args.test, args.test_annot, label_map,
                              image_size=image_size, batch_size=batch_size, augment_data=False)
     score = model.evaluate_generator(eval_gen)
-    print("Evaluation score: ", score)
-
+    print("Evaluation scores: ", score)
 
 
 if __name__ == "__main__":
@@ -96,4 +106,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     train_model(args)
-
