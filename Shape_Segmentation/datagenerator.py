@@ -23,7 +23,7 @@ class DataGenerator(tf.keras.utils.Sequence):
     @param augment_data apply data augmentation to input data
     """
 
-    def __init__(self, image_path: str, mask_path: str, labelmap_path: str, image_size: Tuple = (200, 200), batch_size: int = 128, shuffle: bool = True, file_types: tuple = ('jpg', 'png'), scale: int = 0, augment_data=True):
+    def __init__(self, image_path: str, mask_path: str, labelmap_path: str, image_size: Tuple = (512, 512), batch_size: int = 10, shuffle: bool = True, file_types: tuple = ('jpg', 'png'), scale: int = 0, augment_data=True):
         self._image_path = image_path
         self._mask_path = mask_path
         self._image_size = tuple(image_size)
@@ -149,7 +149,25 @@ class DataGenerator(tf.keras.utils.Sequence):
                                            seed=seed,
                                            shuffle=True)
 
-        return next(g_image), next(g_mask)
+        images, masks = next(g_image), next(g_mask)
+        generated_images = np.zeros_like(images, dtype=float)
+        for i, (image, mask) in enumerate(zip(images, masks)):
+            generated_images[i] = self._aug_img_to_dashed_outline(image, mask)
+
+        return generated_images, masks
+
+    def _aug_img_to_dashed_outline(self, image:np.ndarray, mask:np.ndarray) ->np.ndarray:
+        """
+        @brief randomly augments image to have only outlined profile or dashed profile filling
+        """
+        gray2rgb = lambda img : cv.cvtColor(img, cv.COLOR_GRAY2RGB)
+        rand = np.random.randint(0,5)
+        if rand % 2 == 0:
+            return gray2rgb(augment_to_dashed_profile(image,mask))
+        elif rand == 3:
+            return gray2rgb(augment_to_outlined_profile(image, mask))
+        else:
+            return image
 
     def _read_labelmap(self) -> None:
         """
