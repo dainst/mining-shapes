@@ -7,6 +7,7 @@ import random
 
 from typing import Tuple, List
 from tensorflow import keras
+from data_augmentation_utils import augment_to_dashed_profile, augment_to_outlined_profile
 
 
 class DataGenerator(tf.keras.utils.Sequence):
@@ -40,10 +41,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         # image generator for data augmentation
         dg_args = dict(featurewise_center=False,
                        samplewise_center=False,
-                       rotation_range=15,
+                       rotation_range=10,
                        horizontal_flip=True,
                        vertical_flip=True,
-                       fill_mode='reflect',
+                       fill_mode='nearest',
                        data_format='channels_last')
         self._image_generator = keras.preprocessing.image.ImageDataGenerator(
             **dg_args)
@@ -70,16 +71,13 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         assert len(batch_images) == len(batch_masks)
 
-        images = []
-        mask_images = []
-
         # Read image data
-        [images.append(self._read_and_resize_image(file_name))
-         for file_name in batch_images]
+        images = [self._read_and_resize_image(
+            file_name) for file_name in batch_images]
 
         # Read mask data
-        [mask_images.append(self._read_and_resize_image(file_name))
-         for file_name in batch_masks]
+        mask_images = [self._read_and_resize_image(
+            file_name) for file_name in batch_masks]
 
         if self._augment_data:
             images, mask_images = self._augment_batch(
@@ -135,12 +133,16 @@ class DataGenerator(tf.keras.utils.Sequence):
         @param mask list of masks.
         @param seed random seed to apply same transformation to images and masks
         """
+        generated_images = np.zeros_like(images, dtype=float)
+        for i, (image, mask) in enumerate(zip(images, masks)):
+            generated_images[i] = self._aug_img_to_dashed_outline(image, mask)
+
         # keep the seeds synchronized otherwise the augmentation to the images is different from the masks
         np.random.seed(
             seed if seed is not None else np.random.choice(range(9999)))
         seed = np.random.choice(range(9999))
 
-        g_image = self._image_generator.flow(images,
+        g_image = self._image_generator.flow(generated_images,
                                              batch_size=images.shape[0],
                                              seed=seed,
                                              shuffle=True)
@@ -149,21 +151,18 @@ class DataGenerator(tf.keras.utils.Sequence):
                                            seed=seed,
                                            shuffle=True)
 
-        images, masks = next(g_image), next(g_mask)
-        generated_images = np.zeros_like(images, dtype=float)
-        for i, (image, mask) in enumerate(zip(images, masks)):
-            generated_images[i] = self._aug_img_to_dashed_outline(image, mask)
+        return next(g_image), next(g_mask)
 
-        return generated_images, masks
-
-    def _aug_img_to_dashed_outline(self, image:np.ndarray, mask:np.ndarray) ->np.ndarray:
+    def _aug_img_to_dashed_outline(self, image: np.ndarray, mask: np.ndarray) -> np.ndarray:
         """
         @brief randomly augments image to have only outlined profile or dashed profile filling
+        @param image input image
+        @param correspondig outline mask
         """
-        gray2rgb = lambda img : cv.cvtColor(img, cv.COLOR_GRAY2RGB)
-        rand = np.random.randint(0,5)
+        def gray2rgb(img): return cv.cvtColor(img, cv.COLOR_GRAY2RGB)
+        rand = np.random.randint(0, 5)
         if rand % 2 == 0:
-            return gray2rgb(augment_to_dashed_profile(image,mask))
+            return gray2rgb(augment_to_dashed_profile(image, mask))
         elif rand == 3:
             return gray2rgb(augment_to_outlined_profile(image, mask))
         else:
