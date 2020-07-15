@@ -50,6 +50,7 @@ class DataGenerator(keras.utils.Sequence):
         self._sigma = sigma
 
         self.nr_keypoints = self.get_number_of_keypoints(points_xml_path)
+        self._keypoint_int_map = self.map_keypoints_to_integer(points_xml_path)
         self._images = self.create_image_list(image_path, file_types, shuffle)
         self._keypoints = self.create_keypoint_dict(points_xml_path)
         self._remove_images_without_keypoints()
@@ -78,6 +79,22 @@ class DataGenerator(keras.utils.Sequence):
         return labels
 
     @staticmethod
+    def map_keypoints_to_integer(keypoint_file: str) -> Dict[str, int]:
+        """
+        @brief maps keypoint to fixed integer. Required to map keypoint to correct
+                dimension of heatmap 
+        @param keypoint_file CVAT xml keypoint file
+        """
+        out = {}
+        xmldoc = minidom.parse(keypoint_file)
+        for i, label in enumerate(xmldoc.getElementsByTagName('label')):
+            assert len(label.getElementsByTagName('name')) == 1
+            name_tag = label.getElementsByTagName('name')[0]
+            assert len(name_tag.childNodes) == 1
+            out[name_tag.firstChild.data] = i
+        return out
+
+    @staticmethod
     def create_image_list(image_path: str, file_types: Tuple, shuffle: bool) -> List:
         """
         @brief  Creates a list of all files in given image_path and suffles it.
@@ -97,7 +114,7 @@ class DataGenerator(keras.utils.Sequence):
         return x
 
     @classmethod
-    def create_keypoint_dict(cls, keypoint_file: str) -> Dict:
+    def create_keypoint_dict(cls, keypoint_file: str) -> Dict[str, Dict[str, Tuple[int, int]]]:
         """
         Read cvat xml file and creates dictionary with keypoints
         @param keypoint_file CVAT xml keypoint file
@@ -191,8 +208,11 @@ class DataGenerator(keras.utils.Sequence):
             keypoint_coords = self._keypoints.get(
                 os.path.basename(img_name), (0, 0))
             coords = np.zeros((self.nr_keypoints, 2), dtype=np.int)
-            for i, (x, y) in enumerate(keypoint_coords.values()):
-                coords[i] = int(x*width), int(y*height)
+            for name, value in keypoint_coords.items():
+                heatmap_dim = self._keypoint_int_map.get(name, None)
+                assert heatmap_dim != None
+                coords[heatmap_dim] = int(value.x*width), int(value.y*height)
+
             out[img_i] = generate_heatmap(
                 height, width, coords, sigma=self._sigma)
 
