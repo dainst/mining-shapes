@@ -27,4 +27,4 @@ Use tensorboard to see training progress. Tensorboard can be started with the fo
 tensorboard --logdir save_dir
 ```
 ## Trained model
-Trained model can be downloaded from the following [link](https://cumulus.dainst.org/index.php/s/LQ2aZsRbFGYjtb9).
+Trained model can be downloaded from the following [link](https://cumulus.dainst.org/index.php/s/DxpTApRC2HGbAwd).
