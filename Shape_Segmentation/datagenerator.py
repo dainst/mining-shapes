@@ -1,13 +1,16 @@
+from tensorflow import keras
+from typing import Tuple, List, Union
+from random import Random
 import numpy as np
 import tensorflow as tf
 import os
 import math
 import cv2 as cv
-from random import Random
+import sys
 
-from typing import Tuple, List
-from tensorflow import keras
-from data_augmentation_utils import augment_to_dashed_profile, augment_to_outlined_profile
+sys.path.append(os.path.abspath('../'))
+from dataset_utils.dashed_augmentation.main import augment_to_dashed_profile  # noqa: E402
+from dataset_utils.outlined_augmentation.main import augment_to_outlined_profile  # noqa: E402
 
 
 class DataGenerator(tf.keras.utils.Sequence):
