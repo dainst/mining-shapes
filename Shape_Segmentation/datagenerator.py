@@ -3,7 +3,7 @@ import tensorflow as tf
 import os
 import math
 import cv2 as cv
-import random
+from random import Random
 
 from typing import Tuple, List
 from tensorflow import keras
@@ -111,9 +111,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         masks.sort()
 
         # shuffle
+        seed = np.random.randint(0, 6000)
         if self._shuffle:
-            random.shuffle(x, lambda: .5)
-            random.shuffle(masks, lambda: .5)
+            Random(seed).shuffle(x)
+            Random(seed).shuffle(masks)
 
         assert len(np.unique([os.path.basename(x[i]) == os.path.basename(
             masks[i]) for i in range(len(masks))])) == 1, "Mask basenames not like image basenames"
