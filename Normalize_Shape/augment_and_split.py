@@ -130,10 +130,11 @@ def augment_data(points_path: str, aug_points_path: str, images_path: str, masks
 
 def split_augment_data(_args):
     train_path = split_data(_args)
-    augment_data(_args.points_path,
-                 args.point_aug_path,
-                 train_path,
-                 args.mask_path)
+    if _args.augment_data:
+        augment_data(_args.points_path,
+                     args.point_aug_path,
+                     train_path,
+                     args.mask_path)
 
 
 if __name__ == "__main__":
@@ -149,6 +150,7 @@ if __name__ == "__main__":
                         help="Directory in which corresponding masks are located", required=True)
     parser.add_argument("--output", type=str,
                         help="directory in which splitted dataset will be saved", required=True)
-
+    parser.add_argument("--augment_data", type=bool,
+                        help="Apply data augmentations", default=True)
     args = parser.parse_args()
     split_augment_data(args)
