@@ -32,6 +32,9 @@ RUN pip install pydot && \
     pip install graphviz && \
     apt-get install -y graphviz
 
+RUN pip install tqdm && \
+    pip install autopep8
+    
 # Install pycocoapi
 RUN git clone --depth 1 https://github.com/cocodataset/cocoapi.git && \
     cd cocoapi/PythonAPI && \
@@ -84,5 +87,4 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhisto
 USER $USERNAME
 
 # Entrypoint
-WORKDIR /models/research/object_detection
 ENTRYPOINT ["jupyter", "notebook", "--ip=0.0.0.0", "--no-browser", "--allow-root"]
