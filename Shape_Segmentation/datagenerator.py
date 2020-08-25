@@ -16,7 +16,8 @@ class DataGenerator(tf.keras.utils.Sequence):
     @param image_path path to image data
     @param mask_path path to segmentations masks. \n Should be one channels image where the pixel value represents the class label
     @param classes number of classes 
-    @image_size each image and each mask will be scaled to the given size
+    @image_size each image and each mask will be scaled to the given size.
+                If None: Generator will provide orginial size of images for training with batch_size 1
     @batch_size batch size
     @param shuffle shuffle data or not
     @param file_types tuple of excepted file types
@@ -24,11 +25,12 @@ class DataGenerator(tf.keras.utils.Sequence):
     @param augment_data apply data augmentation to input data
     """
 
-    def __init__(self, image_path: str, mask_path: str, labelmap_path: str, image_size: Tuple = (512, 512), batch_size: int = 10, shuffle: bool = True, file_types: tuple = ('jpg', 'png'), scale: int = 0, augment_data=True):
+    def __init__(self, image_path: str, mask_path: str, labelmap_path: str, image_size: Union[None, Tuple[int, int]] = (512, 512), batch_size: int = 10, shuffle: bool = True, file_types: tuple = ('jpg', 'png'), scale: int = 0, augment_data=True):
         self._image_path = image_path
         self._mask_path = mask_path
-        self._image_size = tuple(image_size)
-        self._batch_size = batch_size
+        self._image_size = tuple(
+            image_size) if image_size != None else image_size
+        self._batch_size = batch_size if self._image_size != None else 1
         self._shuffle = shuffle
         self._file_types = file_types
         self._scale = scale
@@ -37,6 +39,10 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         self._images, self._masks = self._create_dataset()
         self._read_labelmap()
+
+        if self._image_size == None:
+            print(
+                "Network will be trained with adjusted orig image sizes and batch_size of 1")
 
         # image generator for data augmentation
         dg_args = dict(featurewise_center=False,
@@ -70,18 +76,19 @@ class DataGenerator(tf.keras.utils.Sequence):
                                   self._batch_size:(idx + 1) * self._batch_size]
 
         assert len(batch_images) == len(batch_masks)
+        resize_images = True if self._image_size != None else False
 
         # Read image data
-        images = [self._read_and_resize_image(
-            file_name) for file_name in batch_images]
+        images = np.array([self._read_and_resize_image(
+            file_name, resize_images) for file_name in batch_images])
 
         # Read mask data
-        mask_images = [self._read_and_resize_image(
-            file_name) for file_name in batch_masks]
+        mask_images = np.array([self._read_and_resize_image(
+            file_name, resize_images) for file_name in batch_masks])
 
         if self._augment_data:
             images, mask_images = self._augment_batch(
-                np.array(images), np.array(mask_images))
+                images, mask_images)
 
         masks = self._mask_image_to_mask_array(mask_images)
 
@@ -121,11 +128,63 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return x, masks
 
-    def _read_and_resize_image(self, file_name: str) -> np.ndarray:
+    def _read_and_resize_image(self, file_name: str, resize: bool = True) -> np.ndarray:
         """
         @brief reads and resizes an image
+        @param file_name image to be read
+        @resize resize image to self._image_size
         """
-        return cv.resize(cv.cvtColor(cv.imread(file_name, cv.IMREAD_COLOR), cv.COLOR_BGR2RGB), self._image_size)
+        image = self._read_image_as_rgb(file_name)
+        if resize:
+            return cv.resize(image, self._image_size)
+        else:
+            return self._resize_image_to_closest_32_divisor(image)
+
+    def _read_image_as_rgb(self, file_name: str) -> np.ndarray:
+        """ Reads image as RGB image """
+        return cv.cvtColor(cv.imread(file_name, cv.IMREAD_COLOR), cv.COLOR_BGR2RGB)
+
+    def _resize_image_to_closest_32_divisor(self, in_image: np.ndarray) -> np.ndarray:
+        """
+        @brief resizes input image to closest size divisible by 32.
+                Because it is required by segmentation network
+        @param image input image
+        """
+        def closest_by_32(
+            num): return self._find_closest_divisible_Number(num, 32)
+        height, width, *_ = in_image.shape
+        scaling = self._find_scaling(height, width)
+
+        n_height = closest_by_32(math.floor(height/scaling))
+        n_width = closest_by_32(math.floor(width/scaling))
+        return cv.resize(in_image, (n_width, n_height))
+
+    def _find_scaling(self, height: int, width: int) -> float:
+        """ find right scaling to avoid GPU memory overflow """
+        if height * width < 1024**2:  # worked with input schape 1024x1024
+            return 1
+        elif height > 1024 or width > 1024:
+            if height > width:
+                scaling = height/1024
+                return scaling
+            else:
+                return width/1024
+
+    def _find_closest_divisible_Number(self, number: int, divisor: int) -> int:
+        """
+        @brief Function to find the number closest to n and divisible by m 
+        """
+        # Find the quotient
+        q = int(number / divisor)
+        # 1st possible closest number
+        n1 = divisor * q
+        # 2nd possible closest number
+        n2 = divisor * (q + 1) if (number * divisor) > 0 else divisor * (q - 1)
+        # if true, then n1 is the required closest number
+        if abs(number - n1) < abs(number - n2):
+            return n1
+        # else n2 is the required closest number
+        return n2
 
     def _augment_batch(self, images: List, masks: List, seed=None) -> Tuple:
         """
@@ -191,10 +250,11 @@ class DataGenerator(tf.keras.utils.Sequence):
         @brief convert rgb mask image to numpy array with shape (batch_size, rows, cols, classes)
         """
         masks = []
+        image_size = self._image_size if self._image_size != None else mask_images.shape[1:3]
         for maks_image in mask_images:
-            mask = np.zeros(shape=(*(self._image_size), self._nr_classes))
+            mask = np.zeros(shape=(*(image_size), self._nr_classes))
             for category, color in self._classes.items():
-                img_temp = np.zeros(shape=self._image_size)
+                img_temp = np.zeros(shape=image_size)
                 img_temp[np.where((maks_image == color).all(axis=2))] = 1
                 mask[:, :, category] = np.copy(img_temp)
             masks.append(mask)
