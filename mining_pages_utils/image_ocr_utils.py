@@ -1,8 +1,14 @@
-
-import cv2
+import cv2 as cv2
 import numpy as np
 import pandas as pd
+import uuid
+import os
+from pdf2image import convert_from_path
 
+def pdf_to_image(pdf_path: str):
+    os.path.dirname(pdf_path)
+    with os.path.dirname(pdf_path) as path:
+        convert_from_path(pdf_path, dpi=300, thread_count=4, output_folder=path)
 
 def cut_image(dataframe: pd.DataFrame) -> np.ndarray:
     """
@@ -39,7 +45,7 @@ def cut_image_savetemp(dataframe: pd.DataFrame, outpath_base: str) -> pd.DataFra
     dataframe['figure_width'] = figure_width
     dataframe['figure_channel'] = figure_channel
     dataframe['figure_imgnp'] = bbox_np
-    dataframe['figure_tmpid'] = dataframe.name
+    dataframe['figure_tmpid'] = uuid.uuid4()
     dataframe['figure_path'] = outpath_base + str(dataframe['pub_key']) + '_' + str(
         dataframe['pub_value']) + '_' + 'tempid' + str(dataframe['figure_tmpid']) + '.png'
     cv2.imwrite(str(dataframe['figure_path']), bbox_np)

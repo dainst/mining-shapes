@@ -44,14 +44,13 @@ def create_drawing_JSONL(df: pd.DataFrame, file: TextIO):
         '_' + 'tempid' + str(df['figure_tmpid']) + '.png'
     DRAWING["category"] = 'Drawing'
     DRAWING["description"] = 'PAGEID_RAW: ' + \
-        str(df['pageid_raw']) + 'PAGEINFO_RAW: ' + str(df['pageinfo_raw'])
+        str(df['pageid_raw']) + '   ' + 'PAGEINFO_RAW: ' + str(df['pageinfo_raw'])\
+        + '   ' + 'FIGID_RAW: ' + str(df['figid_raw'])
     literature = DRAWING["literature"]
     literature0 = literature[0]
-    literature0['zenonId'] = str(df['pub_key']) + '_' + str(df['pub_value'])
+    literature0['zenonId'] = str(df['pub_value'])
 
-    literature0['quotation'] = str(df['figid_raw'])
-    if not literature0['quotation']:
-        literature0['quotation'] = 'no page detected'
+    literature0['quotation'] = 'p. ' + str(df['pageid_raw']) + ', fig. ' + str(df['figid_raw'])
 
     json.dump(DRAWING, file)
     file.write("\n")
