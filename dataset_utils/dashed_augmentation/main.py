@@ -1,5 +1,6 @@
 import numpy as np
 import cv2 as cv
+from dataset_utils.image_utils import convert_image_gray_if_bgr
 
 
 def generate_random_dashed_array(height, width):
@@ -48,40 +49,3 @@ def augment_to_dashed_profile(_image: np.ndarray, _mask: np.ndarray) -> np.ndarr
         out[y:y+h, x:x+w] += dashed_mask
 
     return out
-
-
-def augment_to_outlined_profile(_image: np.ndarray, _mask: np.ndarray):
-    """
-    @brief Returns vessel profile where profile is only reprensented by outline
-    @param _image input image
-    @param _mask corresponding mask image
-    """
-    # convert to grayscale
-    mask = convert_image_gray_if_bgr(_mask)
-    image = convert_image_gray_if_bgr(_image)
-
-    cnts, _ = cv.findContours(mask, 1, 2)
-
-    out = np.copy(image)
-    out[np.where(mask != 0)] = 255
-
-    color = np.random.randint(10, 50)
-    cv.drawContours(out, cnts, -1, color=color,
-                    thickness=np.random.randint(1, 2))
-
-    return out
-
-
-def convert_image_gray_if_bgr(image: np.ndarray) -> np.ndarray:
-    """converts image to grayscale if is bgr"""
-    return image.astype(np.uint8) if is_grayscale_image(image) else bgr2gray(image)
-
-
-def is_grayscale_image(image: np.ndarray) -> bool:
-    """ check if input image is grayscale image """
-    return True if (len(image.shape) == 2) else False
-
-
-def bgr2gray(img: np.ndarray) -> np.ndarray:
-    """ Converts bgr input image to 8 bit grayscale image """
-    return cv.cvtColor(img, cv.COLOR_BGR2GRAY).astype(np.uint8)

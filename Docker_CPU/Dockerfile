@@ -2,7 +2,7 @@ FROM python:3.7
 
 # install build utilities
 RUN apt-get update && \
-	apt-get install -y gcc make apt-transport-https ca-certificates build-essential
+    apt-get install -y gcc make apt-transport-https ca-certificates build-essential
 
 RUN apt-get install -y git
 
@@ -22,12 +22,19 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y protobuf-compiler python3-
     pip install opencv-python && \
     pip install pytesseract && \
     pip install pandas && \
-    pip install pylint
+    pip install pylint && \
+    pip install tf-slim && \
+    pip install scipy
+RUN apt-get update && \
+    apt-get install -y libgl1-mesa-dev
 
 #to use keras plot_model function
 RUN pip install pydot && \
     pip install graphviz && \
     apt-get install -y graphviz
+
+RUN pip install tqdm && \
+    pip install autopep8
 
 # Install pycocoapi
 RUN git clone --depth 1 https://github.com/cocodataset/cocoapi.git && \
@@ -66,10 +73,10 @@ RUN useradd -ms /bin/bash  $USERNAME -u 1000
 
 # store vscode extensions installed in vscode devcontainer
 RUN mkdir -p /home/$USERNAME/.vscode-server/extensions \
-        /home/$USERNAME/.vscode-server-insiders/extensions \
+    /home/$USERNAME/.vscode-server-insiders/extensions \
     && chown -R $USERNAME \
-        /home/$USERNAME/.vscode-server \
-        /home/$USERNAME/.vscode-server-insiders
+    /home/$USERNAME/.vscode-server \
+    /home/$USERNAME/.vscode-server-insiders
 #store bash history
 RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
     && echo $SNIPPET >> "/root/.bashrc" \
@@ -79,6 +86,6 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhisto
     && chown -R $USERNAME /commandhistory \
     && echo $SNIPPET >> "/home/$USERNAME/.bashrc" 
 USER $USERNAME
+
 # Entrypoint
-WORKDIR /models/research/object_detection
 ENTRYPOINT ["jupyter", "notebook", "--ip=0.0.0.0", "--no-browser", "--allow-root"]

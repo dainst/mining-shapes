@@ -21,7 +21,10 @@ def train_model(_args):
     @param _args command line arguments
     """
     backbone = _args.backbone
-    image_size = [int(i) for i in _args.input_shape]
+    if _args.input_shape[0] == "None":
+        image_size = None
+    else:
+        image_size = [int(i) for i in _args.input_shape]
     epochs = int(_args.epochs)
     batch_size = int(_args.batch_size)
     save_dir = _args.save_dir
@@ -58,8 +61,12 @@ def train_model(_args):
     # train model
     history = model.fit_generator(
         gen, validation_data=val_gen, verbose=1, epochs=epochs, callbacks=[tensorboard_cb])
-    save_str = os.path.join(
-        save_dir, f'training_{backbone}_{image_size[0]}_{image_size[1]}_epochs_{epochs}_{datetime.date.today()}.h5')
+    if image_size != None:
+        save_str = os.path.join(
+            save_dir, f'training_{backbone}_{image_size[0]}_{image_size[1]}_epochs_{epochs}_{datetime.date.today()}.h5')
+    else:
+        save_str = os.path.join(
+            save_dir, f'training_{backbone}_OrigImageSize_epochs_{epochs}_{datetime.date.today()}.h5')
     print(save_str)
     model.save_weights(save_str)
 
@@ -95,7 +102,7 @@ if __name__ == "__main__":
                         help="Specifiy size of input images h,w", required=True)
     parser.add_argument("--batch_size", type=int,
                         default=20, help="Batch size")
-    parser.add_argument("--save_dir", type=str, default="/home/models/save_dir",
+    parser.add_argument("--save_dir", type=str, default="save_dir",
                         help="Directory to save weights of trained model")
     parser.add_argument("--epochs", type=int, default=50,
                         help="Number of epochs")
