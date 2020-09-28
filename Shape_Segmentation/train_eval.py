@@ -71,8 +71,8 @@ def train_model(_args):
     model.save_weights(save_str)
 
     # save train history
-    with open(os.path.join(save_dir, 'train_history'), 'bw+') as history_file:
-        pickle.dump(history.history, history)
+    with open(os.path.join(save_dir, 'train_history.pickle'), 'bw+') as history_file:
+        pickle.dump(history.history, history_file)
     # model evaluation
     eval_gen = DataGenerator(args.test, args.test_annot, label_map,
                              image_size=image_size, batch_size=batch_size, augment_data=False)
