@@ -223,10 +223,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         @param correspondig outline mask
         """
         def gray2rgb(img): return cv.cvtColor(img, cv.COLOR_GRAY2RGB)
-        rand = np.random.randint(0, 5)
-        if rand % 2 == 0:
+        rand = np.random.randint(0, 8)
+        if rand == 3:
             return gray2rgb(augment_to_dashed_profile(image, mask))
-        elif rand == 3:
+        elif rand == 4:
             return gray2rgb(augment_to_outlined_profile(image, mask))
         else:
             return image
