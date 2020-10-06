@@ -5,7 +5,7 @@ See https://github.com/qubvel/segmentation_models for more details.
 
 import argparse
 
-from datagenerator import DataGenerator
+from datagenerator import DataGenerator, AugOptions
 import datetime
 import pytz
 from tensorflow import keras
@@ -44,8 +44,10 @@ def train_model(_args):
     path_train = os.path.join(_args.train_data, 'train')
     path_train_a = os.path.join(_args.train_data, 'trainannot')
     label_map = _args.label_map
+    aug_data = AugOptions(
+        img_trans=_args.aug_trans, artificial=_args.aug_artificial)
     gen = DataGenerator(path_train, path_train_a, label_map,
-                        image_size=image_size, batch_size=batch_size)
+                        image_size=image_size, batch_size=batch_size, augment_data=aug_data)
 
     path_val = os.path.join(_args.train_data, 'val')
     path_val_a = os.path.join(_args.train_data, 'valannot')
@@ -88,7 +90,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Train Shape segmentation model.")
     parser.add_argument("--train_data", type=str,
-                        help="directory with validation, train and test data", required=True)
+                        help="directory with train, validation and test data", required=True)
     parser.add_argument("--input_shape", nargs='+',
                         help="Specifiy size of input images h,w", required=True)
     parser.add_argument("--label_map", type=str,
@@ -97,6 +99,10 @@ if __name__ == "__main__":
                         default=20, help="Batch size")
     parser.add_argument("--save_dir", type=str, default="save_dir",
                         help="Directory to save weights of trained model")
+    parser.add_argument("--aug_artificial", type=bool, default=True,
+                        help="Augment data by creating artificial training data")
+    parser.add_argument("--aug_trans", type=bool, default=True,
+                        help="Augment data by image transformation")
     parser.add_argument("--epochs", type=int, default=50,
                         help="Number of epochs")
     parser.add_argument("--backbone", type=str, default='resnet34',
