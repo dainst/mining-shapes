@@ -4,11 +4,12 @@ See https://github.com/qubvel/segmentation_models for more details.
 """
 
 import argparse
-import segmentation_models as sm
+
 from datagenerator import DataGenerator
 import datetime
 import pytz
-import keras
+from tensorflow import keras
+import segmentation_models as sm
 import os
 import pickle
 
@@ -40,14 +41,14 @@ def train_model(_args):
         metrics=[sm.metrics.iou_score],
     )
     # set data generators
-    path_train = _args.train_data
-    path_train_a = _args.train_annot
+    path_train = os.path.join(_args.train_data, 'train')
+    path_train_a = os.path.join(_args.train_data, 'trainannot')
     label_map = _args.label_map
     gen = DataGenerator(path_train, path_train_a, label_map,
                         image_size=image_size, batch_size=batch_size)
 
-    path_val = _args.val_data
-    path_val_a = _args.val_annot
+    path_val = os.path.join(_args.train_data, 'val')
+    path_val_a = os.path.join(_args.train_data, 'valannot')
     val_gen = DataGenerator(path_val, path_val_a, label_map,
                             image_size=image_size, batch_size=batch_size, augment_data=False)
     # set tensorboard callback
@@ -74,7 +75,9 @@ def train_model(_args):
     with open(os.path.join(save_dir, 'train_history.pickle'), 'bw+') as history_file:
         pickle.dump(history.history, history_file)
     # model evaluation
-    eval_gen = DataGenerator(args.test, args.test_annot, label_map,
+    path_test = os.path.join(_args.train_data, 'test')
+    path_test_a = os.path.join(_args.train_data, 'testannot')
+    eval_gen = DataGenerator(path_test, path_test_a, label_map,
                              image_size=image_size, batch_size=batch_size, augment_data=False)
     score = model.evaluate_generator(eval_gen)
     print("Evaluation scores: ", score)
@@ -85,21 +88,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Train Shape segmentation model.")
     parser.add_argument("--train_data", type=str,
-                        help="directory in which training images are located.", required=True)
-    parser.add_argument("--train_annot", type=str,
-                        help="directory in which training mask images are located", required=True)
-    parser.add_argument("--val_data", type=str,
-                        help="directory in which validation images are located.", required=True)
-    parser.add_argument("--val_annot", type=str,
-                        help="directory in which validation mask images are located", required=True)
-    parser.add_argument("--test", type=str,
-                        help="directory in which test images are located", required=True)
-    parser.add_argument("--test_annot", type=str,
-                        help="directory in which test mask images are located", required=True)
-    parser.add_argument("--label_map", type=str,
-                        help='directory in which label map (exported by CVAT) is located', required=True)
+                        help="directory with validation, train and test data", required=True)
     parser.add_argument("--input_shape", nargs='+',
                         help="Specifiy size of input images h,w", required=True)
+    parser.add_argument("--label_map", type=str,
+                        help='directory in which label map (exported by CVAT) is located', required=True)
     parser.add_argument("--batch_size", type=int,
                         default=20, help="Batch size")
     parser.add_argument("--save_dir", type=str, default="save_dir",
