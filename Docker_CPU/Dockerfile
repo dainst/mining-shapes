@@ -65,7 +65,7 @@ ENV PYTHONPATH=$PYTHONPATH:/models/research
 RUN python /models/research/object_detection/builders/model_builder_test.py
 
 #install segmentation models (see https://github.com/qubvel/segmentation_models)
-RUN pip install -U segmentation-models==0.2.1
+RUN pip install segmentation-models
 
 #add non root user to access locally data created in dev container 
 ARG USERNAME=shape_miner
