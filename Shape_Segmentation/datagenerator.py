@@ -1,6 +1,7 @@
 from tensorflow import keras
 from typing import Tuple, List, Union
 from random import Random
+from collections import namedtuple
 import numpy as np
 import tensorflow as tf
 import os
@@ -11,6 +12,8 @@ import sys
 sys.path.append(os.path.abspath('../'))
 from dataset_utils.dashed_augmentation.main import augment_to_dashed_profile  # noqa: E402
 from dataset_utils.outlined_augmentation.main import augment_to_outlined_profile  # noqa: E402
+
+AugOptions = namedtuple('AugOptions', ['img_trans', 'artificial'])
 
 
 class DataGenerator(tf.keras.utils.Sequence):
@@ -28,7 +31,17 @@ class DataGenerator(tf.keras.utils.Sequence):
     @param augment_data apply data augmentation to input data
     """
 
-    def __init__(self, image_path: str, mask_path: str, labelmap_path: str, image_size: Union[None, Tuple[int, int]] = (512, 512), batch_size: int = 10, shuffle: bool = True, file_types: tuple = ('jpg', 'png'), scale: int = 0, augment_data=True):
+    def __init__(self,
+                 image_path: str,
+                 mask_path: str,
+                 labelmap_path: str,
+                 image_size: Union[None, Tuple[int, int]] = (512, 512),
+                 batch_size: int = 10,
+                 shuffle: bool = True,
+                 file_types: tuple = ('jpg', 'png'),
+                 scale: int = 0,
+                 augment_data: Union[bool, AugOptions] = True):
+
         self._image_path = image_path
         self._mask_path = mask_path
         self._image_size = tuple(
@@ -37,7 +50,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self._shuffle = shuffle
         self._file_types = file_types
         self._scale = scale
-        self._augment_data = augment_data
+        self._augment_data = self.get_aug_mode(augment_data)
         self._labelmap_path = labelmap_path
 
         self._images, self._masks = self._create_dataset()
@@ -89,9 +102,8 @@ class DataGenerator(tf.keras.utils.Sequence):
         mask_images = np.array([self._read_and_resize_image(
             file_name, resize_images) for file_name in batch_masks])
 
-        if self._augment_data:
-            images, mask_images = self._augment_batch(
-                images, mask_images)
+        if self._augment_data.img_trans or self._augment_data.artificial:
+            images, mask_images = self._augment_batch(images, mask_images)
 
         masks = self._mask_image_to_mask_array(mask_images)
 
@@ -196,9 +208,13 @@ class DataGenerator(tf.keras.utils.Sequence):
         @param mask list of masks.
         @param seed random seed to apply same transformation to images and masks
         """
-        generated_images = np.zeros_like(images, dtype=float)
-        for i, (image, mask) in enumerate(zip(images, masks)):
-            generated_images[i] = self._aug_img_to_dashed_outline(image, mask)
+        if self._augment_data.artificial:
+            generated_images = np.zeros_like(images, dtype=float)
+            for i, (image, mask) in enumerate(zip(images, masks)):
+                generated_images[i] = self._aug_img_to_dashed_outline(
+                    image, mask)
+        else:
+            generated_images = images
 
         # keep the seeds synchronized otherwise the augmentation to the images is different from the masks
         np.random.seed(
@@ -223,10 +239,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         @param correspondig outline mask
         """
         def gray2rgb(img): return cv.cvtColor(img, cv.COLOR_GRAY2RGB)
-        rand = np.random.randint(0, 5)
-        if rand % 2 == 0:
+        rand = np.random.randint(0, 8)
+        if rand == 3:
             return gray2rgb(augment_to_dashed_profile(image, mask))
-        elif rand == 3:
+        elif rand == 4:
             return gray2rgb(augment_to_outlined_profile(image, mask))
         else:
             return image
@@ -263,3 +279,14 @@ class DataGenerator(tf.keras.utils.Sequence):
             masks.append(mask)
 
         return np.array(masks)
+
+    @staticmethod
+    def get_aug_mode(augment_data: Union[bool, AugOptions]):
+        """ @brief  Return augmentation options. Data generator can augment data by image transformation and/or by creating new 
+                    artificial image data
+            @param augment_data Augmentation options 
+        """
+        if isinstance(augment_data, bool):
+            return AugOptions(True, True) if augment_data else AugOptions(False, False)
+        else:
+            return augment_data

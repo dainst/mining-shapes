@@ -1,0 +1,17 @@
+Cython
+contextlib2
+jupyter
+matplotlib
+Pillow
+opencv-python
+pytesseract
+pandas
+pylint
+tf-slim
+scipy
+pydot
+graphviz
+tqdm
+autopep8
+segmentation-models
+pdf2image

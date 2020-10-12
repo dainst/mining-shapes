@@ -5,10 +5,7 @@ Segmentation algorithm binarizes input image by assigning each pixel a class lab
 ![alt-text-1](imgs/segmentation.png "title-1") 
 
 ## Code
-One possibility is to train a U-net architecture from scratch. The code for the U-net architecture code is taken from [M. Meehan ](https://gist.github.com/margaretmeehan/f6831e5f5b071ba96eabb3dd91f38bec) and
-[M. Meehan on Microsoft](https://devblogs.microsoft.com/cse/2018/07/18/semantic-segmentation-small-data-using-keras-azure-deep-learning-virtual-machine/) and is used in notebook unet_self_made.ipynb. However, it is not recommended to use this approach, because the training requires a lot of data to train all the 33M parameters of the network. <br/>
-We achieved much better results by using the u-net architecture from the [segmentation_models](https://github.com/qubvel/segmentation_models) package. Here, the encoder network was pretrained on imagenet and the encoder weights were frezzed during training. Therefore, only the decoder had to be trained which drastically reduced the number of parameters to be trained. An example usage of the pretrained u-net is shown in notebook [Ceramics_Segmentation_colab.ipynb](Ceramics_Segmentation_colab.ipynb).
-
+We are using the u-net architecture from the [segmentation_models](https://github.com/qubvel/segmentation_models) package. Here, the encoder network was pretrained on imagenet and the encoder weights were fixed during training. Therefore, only the decoder had to be trained which drastically reduced the number of parameters to be trained. 
 
 ## Set up Docker 
 See [README](../README.md).
@@ -18,20 +15,36 @@ To train the segmentation model the image data has to converted into the followi
 - input images: (batch_size, height, width, channels) in the range [0,255] <br/>
 - training images: (batch_size,height,width, classes) <br/> 
 ![alt-text-1](imgs/train_out.png "Example shape of training image")
-You can use the notebook [preprocess_data](preprocess_data.ipynb) to prepare the images exported by [CVAT](https://github.com/opencv/cvat). The masks in CVAT should be dumped as mask zip.
 
 ## Training data
 The training can be downloaded from the the [DAI CVAT server](http://cvat.dainst.de/). You have to be in the DAI-vpn reach the server. Use script [split_cvat_data](split_cvat_data.py) to split the exported data into train/test/validation sets.
+The splitted and ready to use training data can be downloaded [here]()
 
 ## Trained model
 You can find the model trained with ResNet34 backbone [here](https://cumulus.dainst.org/index.php/s/fXjDbfXcAXHyWTf).
 
 ## Run training and evaluation
-Mount training data to docker container.  Use the docker-compose.yml file for that. There are two compose files. One for GPU and one for CPU configuration. 
+Mount training data to docker container. Use the docker-compose.yml file for that. There are two compose files. One for GPU and one for CPU configuration. 
+The training data should have the following directory structure:
+* train_data
+    * test
+    * testannot
+    * train
+    * trainannot
+    * val
+    * valannot
+For training use script [train_eval.py](train_eval.py).
 ```
-python train.py --help (see required arguments)
-python train.py --arguments
+python train_eval.py --help (see required arguments)
+python train.train_eval --arg1 --arg2
 ```
+### Data augmentation
+There are two possibilities to augment the training data.
+1. Create artificial training data<br/>
+    Generate randomly filled vesselprofiles like the one in the image below.
+    ![image](imgs/aug_ex.png)
+2. Augment data by image transformations like rotation, shifting, flipping, etc.
+
 ## Possible improvements
 1. Improve annotation quality of training data
 2. Tune model hyperparameters

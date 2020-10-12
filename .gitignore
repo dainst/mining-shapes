@@ -7,3 +7,4 @@ vscode_remote/**
 #files to ignore
 *.DS_Store
 *.h5
+*.pickle

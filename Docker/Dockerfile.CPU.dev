@@ -1,0 +1,42 @@
+FROM tensorflow/tensorflow:1.15.3
+
+#install linux software
+COPY installscript.sh /tmp/installscript.sh
+RUN chmod +x /tmp/installscript.sh
+RUN /tmp/installscript.sh
+RUN rm /tmp/installscript.sh
+
+#install python packages
+COPY requirements.txt /tmp/requirements.txt
+RUN pip3 install --upgrade pip
+RUN pip3 install -r /tmp/requirements.txt
+RUN rm /tmp/requirements.txt
+
+#install object detection api
+COPY installobjectdetectionapi.sh /tmp/installobjectdetectionapi.sh
+RUN chmod +x /tmp/installobjectdetectionapi.sh
+RUN /tmp/installobjectdetectionapi.sh
+RUN rm /tmp/installobjectdetectionapi.sh
+
+#add non root user to access locally data created in dev container 
+ARG USERNAME=shape_miner
+RUN useradd -ms /bin/bash  $USERNAME -u 1000
+
+# store vscode extensions installed in vscode devcontainer
+RUN mkdir -p /home/$USERNAME/.vscode-server/extensions \
+    /home/$USERNAME/.vscode-server-insiders/extensions \
+    && chown -R $USERNAME \
+    /home/$USERNAME/.vscode-server \
+    /home/$USERNAME/.vscode-server-insiders
+#store bash history
+RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+    && echo $SNIPPET >> "/root/.bashrc" \
+    # [Optional] If you have a non-root user
+    && mkdir /commandhistory \
+    && touch /commandhistory/.bash_history \
+    && chown -R $USERNAME /commandhistory \
+    && echo $SNIPPET >> "/home/$USERNAME/.bashrc" 
+USER $USERNAME
+
+# Entrypoint
+ENTRYPOINT ["jupyter", "notebook", "--ip=0.0.0.0", "--no-browser", "--allow-root"]
