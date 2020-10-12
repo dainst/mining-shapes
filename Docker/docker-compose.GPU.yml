@@ -1,0 +1,17 @@
+version: '3.5'
+
+services:
+  mining_shapes:
+    container_name: shapes_mining
+    build:
+      context: ./
+      network: host
+      dockerfile: Dockerfile.GPU
+    ports:
+      - '8888:8888' #for jupyter notebook
+      - '6006:6006' #for tensorboard
+    volumes:
+      - ../:/home/Code
+
+    working_dir: /home/Code
+    tty: true

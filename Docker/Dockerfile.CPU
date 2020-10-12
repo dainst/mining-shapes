@@ -1,0 +1,23 @@
+FROM tensorflow/tensorflow:1.15.3
+
+#install linux software
+COPY installscript.sh /tmp/installscript.sh
+RUN chmod +x /tmp/installscript.sh
+RUN /tmp/installscript.sh
+RUN rm /tmp/installscript.sh
+
+#install python packages
+COPY requirements.txt /tmp/requirements.txt
+RUN pip3 install --upgrade pip
+RUN pip3 install -r /tmp/requirements.txt
+RUN rm /tmp/requirements.txt
+
+#install object detection api
+COPY installobjectdetectionapi.sh /tmp/installobjectdetectionapi.sh
+RUN chmod +x /tmp/installobjectdetectionapi.sh
+RUN /tmp/installobjectdetectionapi.sh
+RUN rm /tmp/installobjectdetectionapi.sh
+
+
+# Entrypoint
+ENTRYPOINT ["jupyter", "notebook", "--ip=0.0.0.0", "--no-browser", "--allow-root"]
