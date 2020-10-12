@@ -10,7 +10,7 @@ from PIL import Image
 
 
 from object_detection.utils import dataset_util, ops
-import segmentation_models as sm
+#import segmentation_models as sm
 
 
 def create_tf_example(group, path):

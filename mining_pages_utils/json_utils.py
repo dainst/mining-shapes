@@ -13,22 +13,19 @@ def create_find_JSONL(df: pd.DataFrame, file: TextIO):
     relations["isChildOf"] = 'Findspot_refferedtoin_' + \
         str(df['pub_key']) + '_' + str(df['pub_value'])
     InstanceOfList = relations["isInstanceOf"]
-    typename = 'Type_' + str(df['pub_key']) + '_' + str(df['pub_value']
-                                                        ) + '_' + 'tempid' + str(df['figure_tmpid'])
+    typename = 'Type_' + str(df['figure_tmpid'])
     InstanceOfList.append(typename)
     depictedInList = relations["isDepictedIn"]
-    imagename = str(df['pub_key']) + '_' + str(df['pub_value']) + \
-        '_' + 'tempid' + str(df['figure_tmpid']) + '.png'
+    imagename = str(df['figure_tmpid']) + '.png'
     depictedInList.append(imagename)
     json.dump(FIND, file)
     file.write("\n")
 
 
-def create_type_JSONL(df: pd.DataFrame, file: TextIO):
+def create_constructivisttype_JSONL(df: pd.DataFrame, file: TextIO):
     TYPE_template = '{"category":"","identifier":"","relations":{"isChildOf":""}}'
     TYPE = json.loads(TYPE_template)
-    TYPE["identifier"] = 'Type_' + str(df['pub_key']) + '_' + str(
-        df['pub_value']) + '_' + 'tempid' + str(df['figure_tmpid'])
+    TYPE["identifier"] = 'Type_' + str(df['figure_tmpid'])
     TYPE["category"] = 'Type'
     relations = TYPE["relations"]
     relations["isChildOf"] = 'Catalog_' + \
@@ -36,12 +33,33 @@ def create_type_JSONL(df: pd.DataFrame, file: TextIO):
     json.dump(TYPE, file)
     file.write("\n")
 
+def create_normativtype_JSONL(df: pd.DataFrame, file: TextIO):
+    TYPE_template = '{"category":"","identifier":"", "shortDescription":"none","literature":[{"quotation":"none","zenonId":""}],"relations":{"isChildOf":"","isDepictedIn":[]}}'
+    TYPE = json.loads(TYPE_template)
+    TYPE["identifier"] = 'Type_' + str(df['figure_tmpid'])
+    TYPE["category"] = 'Type'
+    relations = TYPE["relations"]
+    relations["isChildOf"] = 'Catalog_' + \
+        str(df['pub_key']) + '_' + str(df['pub_value'])
+    depictedInList = relations["isDepictedIn"]
+    imagename = str(df['figure_tmpid']) + '.png'
+    depictedInList.append(imagename)
+    TYPE["shortDescription"] = 'PAGEID_RAW: ' + \
+        str(df['pageid_raw']) + '   ' + 'PAGEINFO_RAW: ' + str(df['pageinfo_raw'])\
+        + '   ' + 'FIGID_RAW: ' + str(df['figid_raw'])
+    literature = TYPE["literature"]
+    literature0 = literature[0]
+    literature0['zenonId'] = str(df['pub_value'])
+
+    literature0['quotation'] = 'p. ' + str(df['pageid_raw']) + ', fig. ' + str(df['figid_raw'])
+    json.dump(TYPE, file)
+    file.write("\n")
+
 
 def create_drawing_JSONL(df: pd.DataFrame, file: TextIO):
     DRAWING_template = '{"category":"","identifier":"", "description":"none","literature":[{"quotation":"none","zenonId":""}]}'
     DRAWING = json.loads(DRAWING_template)
-    DRAWING["identifier"] = str(df['pub_key']) + '_' + str(df['pub_value']) + \
-        '_' + 'tempid' + str(df['figure_tmpid']) + '.png'
+    DRAWING["identifier"] = str(df['figure_tmpid']) + '.png'
     DRAWING["category"] = 'Drawing'
     DRAWING["description"] = 'PAGEID_RAW: ' + \
         str(df['pageid_raw']) + '   ' + 'PAGEINFO_RAW: ' + str(df['pageinfo_raw'])\

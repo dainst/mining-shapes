@@ -29,7 +29,7 @@ def get_figid_labelmap_as_df(path_to_labels: str) ->pd.DataFrame:
         columns={'id': 'figid_detection_classes', 'name': 'figid_detection_classesname'})
     return category_index
 
-def provide_pdf_path(inputdirectory: str):
+def provide_pdf_path(inputdirectory):
     listOfFiles = []
     for (dirpath, dirnames, filenames) in os.walk(inputdirectory):
         listOfFiles += [os.path.join(dirpath, file) for file in filenames if file.endswith(".pdf")] 

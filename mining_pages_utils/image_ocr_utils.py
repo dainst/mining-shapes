@@ -5,10 +5,23 @@ import uuid
 import os
 from pdf2image import convert_from_path
 
-def pdf_to_image(pdf_path: str):
-    os.path.dirname(pdf_path)
-    with os.path.dirname(pdf_path) as path:
-        convert_from_path(pdf_path, dpi=300, thread_count=4, output_folder=path)
+def pdf_to_image(pdf_path):
+    path = os.path.dirname(pdf_path)
+    name = os.path.basename(pdf_path)
+    convert_from_path(pdf_path, dpi=300, fmt='png', thread_count=4, output_file=name, output_folder=path)
+
+def double_to_singlepage(dataframe, splitpercent):
+    print(dataframe['page_path'])
+    doublepage_imgnp = cv2.imread(dataframe['page_path'])
+    height, width, channel = doublepage_imgnp.shape
+    splitline = int(width*splitpercent)
+
+    pageleft_imgnp = doublepage_imgnp[0:height, 0:splitline]
+    pageright_imgnp = doublepage_imgnp[0:height, splitline:width]
+    cv2.imwrite(dataframe['page_path'].replace('.png','-left.png'), pageleft_imgnp)
+    cv2.imwrite(dataframe['page_path'].replace('.png','-right.png'), pageright_imgnp)
+
+
 
 def cut_image(dataframe: pd.DataFrame) -> np.ndarray:
     """
@@ -46,8 +59,7 @@ def cut_image_savetemp(dataframe: pd.DataFrame, outpath_base: str) -> pd.DataFra
     dataframe['figure_channel'] = figure_channel
     dataframe['figure_imgnp'] = bbox_np
     dataframe['figure_tmpid'] = uuid.uuid4()
-    dataframe['figure_path'] = outpath_base + str(dataframe['pub_key']) + '_' + str(
-        dataframe['pub_value']) + '_' + 'tempid' + str(dataframe['figure_tmpid']) + '.png'
+    dataframe['figure_path'] = outpath_base + str(dataframe['figure_tmpid']) + '.png'
     cv2.imwrite(str(dataframe['figure_path']), bbox_np)
 
     return dataframe
@@ -133,3 +145,5 @@ def ocr_post_processing_pageid(row):
     pageid_raw = row['pageid_raw']
     row['pageid_int'] = [int(s) for s in pageid_raw.split() if s.isdigit()]
     return row
+
+
