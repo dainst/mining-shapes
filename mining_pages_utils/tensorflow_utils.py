@@ -1,16 +1,21 @@
+import sys
 import tensorflow as tf
-from tensorflow import keras
+#from tensorflow import keras
+from tqdm import tqdm
 import io
 import os
-import math
+#import math
 import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
-
-
+from typing import Tuple, List
 from object_detection.utils import dataset_util, ops
 import segmentation_models as sm
+
+# pylint: disable=import-error
+sys.path.append(os.path.abspath('/home/Code/Normalize_Shape'))
+from point_detector import PointDetector  # noqa: E402
 
 
 def create_tf_example(group, path):
@@ -185,7 +190,7 @@ def run_inference(tensor_dict: dict, image: np.ndarray, session: tf.compat.v1.Se
     return output_dict
 
 
-def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath: str) -> None:
+def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath: str, img_size: Tuple[int, int] = (512, 512)) -> None:
     """
     @brief performs segmentation of vesselprofile images
     @param vesselpath directory of vesselprofile images
@@ -193,7 +198,6 @@ def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath:
     @param modelpath location of saved model weights. Weights should be stored in .h5 format
     """
     vessel_image_list = os.listdir(vesselpath)
-    foreground_channel = 1
 
     # load pretrained model
     seg_model = sm.Unet('resnet34', encoder_weights='imagenet', input_shape=(
@@ -201,29 +205,115 @@ def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath:
     seg_model.load_weights(modelpath)
 
     # predict segmentations and store to segmentpath
-    prog_bar = keras.utils.Progbar(
-        len(vessel_image_list)-1, width=30, verbose=1, interval=0.5, unit_name='step')
+    prog_bar = tqdm(total=len(vessel_image_list)-1)
+    #keras.utils.Progbar(len(vessel_image_list)-1, width=30, verbose=1, interval=0.5, unit_name='step')
 
-    for i, img_name in enumerate(vessel_image_list):
+    for img_name in vessel_image_list:
         image = cv2.imread(os.path.join(
             vesselpath, img_name), cv2.IMREAD_COLOR)
         height_orig, width_orig, *_ = image.shape
-        image = resize_image_to_closest_2_power(image)
-        segmented_img = seg_model.predict(image[np.newaxis, ...])
-        cv2.imwrite(os.path.join(segmentpath, img_name), cv2.resize(
-            segmented_img[0, :, :, foreground_channel]*255, (width_orig, height_orig)))
-        prog_bar.update(i)
+        image = cv2.resize(image, img_size)
+        seg_img = seg_model.predict(image[np.newaxis, ...])
+        seg_img = (np.argmax(seg_img[0], axis=2) * 255).astype(np.uint8)
+
+        if is_img_black(seg_img):
+            cv2.imwrite(os.path.join(segmentpath, f"trash_{img_name}"), cv2.resize(
+                seg_img, (width_orig, height_orig)))
+        else:
+            seg_img = postprocess_image(seg_img, img_size, image.shape[:2],)
+            cv2.imwrite(os.path.join(segmentpath, img_name), seg_img)
+
+        prog_bar.update(1)
+    prog_bar.close()
 
 
-def resize_image_to_closest_2_power(in_image: np.ndarray) -> np.ndarray:
+def is_img_black(img: np.ndarray):
+    """ Check if input grayscale image is black """
+    return True if not np.any(img) else False
+
+
+def postprocess_image(img: np.ndarray, seg_shape: Tuple[int, int], orig_shape: Tuple[int, int]) -> np.ndarray:
+    contours, _ = cv2.findContours(
+        img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contours = sorted(contours, key=len, reverse=True)
+
+    resize_cnt = []
+    # only select 2 largest segments
+    for contour in contours[:2]:
+        norm_cnt = scale_contour(contour, 1/np.array(seg_shape))
+        resize_cnt_temp = scale_contour(norm_cnt, orig_shape)
+        resize_cnt.append(resize_cnt_temp.astype(np.int))
+
+    out_img = np.zeros(orig_shape, dtype=np.uint8)
+    cv2.fillPoly(out_img, pts=resize_cnt, color=255)
+    return out_img
+
+
+def scale_contour(cnt, shape):
+    out_cnt = np.copy(cnt).astype(np.float)
+    out_cnt[:, 0, 0] *= shape[1]
+    out_cnt[:, 0, 1] *= shape[0]
+    return out_cnt
+
+
+def run_point_detection(vesselpath: str, pointpath: str, modelpath: str):
+    vessel_image_list = os.listdir(vesselpath)
+
+    # setup model
+    print("Load model")
+    img_size = (256, 256)
+    model = PointDetector(input_shape=(*img_size, 3))
+    model.load_weights(modelpath)
+    df = pd.DataFrame(columns=['img_name', 'Top_Rot', 'Base_Rot',
+                               'Down_Rot', 'Up_Rot', 'Base_Side', 'Top_Side'])
+
+    # process images
+    print("Process images")
+    prog_bar = tqdm(total=len(vessel_image_list)-1)
+    for img_name in vessel_image_list:
+        image = cv2.imread(os.path.join(
+            vesselpath, img_name), cv2.IMREAD_COLOR)
+        height_orig, width_orig, *_ = image.shape
+        image = cv2.resize(image, img_size)
+        y = model.predict_img(image)
+        norm_coords = heatmaps_to_array(y[0])
+        scaled_coords = scale_and_format_coords(
+            norm_coords, height_orig, width_orig)
+        df = df.append({'img_name': img_name,
+                        'Top_Rot': scaled_coords[0], 'Base_Rot': scaled_coords[1],
+                        'Down_Rot': scaled_coords[2], 'Up_Rot': scaled_coords[3],
+                        'Base_Side': scaled_coords[4], 'Top_Side': scaled_coords[5]}, ignore_index=True)
+
+        prog_bar.update(1)
+
+    prog_bar.close()
+    df.to_csv(os.path.join(pointpath, "points.csv"), index=False)
+
+
+def scale_and_format_coords(norm_coords: List[Tuple[int, int]], height: int, width: int):
     """
-    @brief resizes input image to closest 2**x size
-    @param image input image
+    Scale normalized coordinates and set 0 values to no_value string
     """
-    def closest_2power_value(value):
-        return 2**round(math.log(value, 2))
+    scaled_coord = []
+    for h, w in norm_coords:
+        if h == 0 and w == 0:
+            scaled_coord.append("no_value")
+        else:
+            scaled_coord.append((int(h*height), int(w*width)))
+    return scaled_coord
 
-    height, width, *_ = in_image.shape
-    n_height = closest_2power_value(height)
-    n_width = closest_2power_value(width)
-    return cv2.resize(in_image, (n_width, n_height))
+
+def heatmaps_to_array(heatmap: np.ndarray, nr_classes: int = 6, heatmap_shape: Tuple[int, int] = (64, 64)) -> List[Tuple[int, int]]:
+    """
+    Convert heatmap to normalized list of coordinates
+    """
+    for i in range(nr_classes):
+        if np.max(heatmap[:, :, i]) < 0.2:
+            heatmap[:, :, i] = np.zeros(heatmap_shape)
+
+    max_coords = [np.unravel_index(
+        heatmap[:, :, i].argmax(), heatmap[:, :, i].shape) for i in range(nr_classes)]
+
+    norm_coords = [(lambda i, v: (i/heatmap_shape[0], v/heatmap_shape[1]))(i, v)
+                   for i, v in max_coords]
+    return norm_coords
