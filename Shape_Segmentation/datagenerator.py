@@ -9,7 +9,8 @@ import math
 import cv2 as cv
 import sys
 
-sys.path.append(os.path.abspath('../'))
+# pylint: disable=import-error
+sys.path.append(os.path.abspath('/home/Code'))
 from dataset_utils.dashed_augmentation.main import augment_to_dashed_profile  # noqa: E402
 from dataset_utils.outlined_augmentation.main import augment_to_outlined_profile  # noqa: E402
 
