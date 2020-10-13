@@ -16,52 +16,37 @@ DataGeneratorInputs = namedtuple(
 class PointDetector:
     """
     @brief Network to detect points on ceramic shape profiles.
-           Network architecture based on Simple Baselines for Human Pose Estimation and Traking 
+           Network architecture based on Simple Baselines for Human Pose Estimation and Traking
            from Bin Xia et al.
-    @param image_data DataGeneratorInputs namedtuple with image path and path of points exported as CVAT xml
-    @param val_data DataGeneratorInputs namedtuple with val image path and path of points exported as CVAT xml
-    @param input_shape shape of input data (height, width, channels). Should be a RGB image because resnet is trained 
+    @param input_shape shape of input data (height, width, channels). Should be a RGB image because resnet is trained
             on RGB dat. Only used for training. Prediction can be done with arbitrarly width and height
     @param batch_size batch size
-    @simga standard deviation of Gaussian heatmap 
-    @save_dir directory to save trained model and training stats
+    @simga standard deviation of Gaussian heatmap
+    @nr_keypoints Number of keypoints
     """
 
     def __init__(
         self,
-        image_data: DataGeneratorInputs,
-        val_data: DataGeneratorInputs,
         input_shape: Tuple,
-        batch_size: int,
-        sigma: int = 2,
-        save_dir: str = "save_dir",
+        batch_size: int = 16,
+        sigma: int = 3,
+        nr_keypoints: int = 6,
     ):
 
         assert len(input_shape) == 3 and input_shape[2] == 3,\
             "Wrong input shape. Use 3 channel rgb data"
 
         self._input_shape = input_shape
+        self._nr_keypoints = nr_keypoints
+        self._sigma = sigma
+        self._batch_size = batch_size
+        self._save_dir = None
+        self._data_generator = None
+        self._val_generator = None
 
-        gen_arcs = {
-            "image_size": self._input_shape[:2],
-            "batch_size": batch_size,
-            "sigma": sigma,
-        }
-        self._data_generator = DataGenerator(
-            image_path=image_data.image_path, points_xml_path=image_data.points_xml_path, **gen_arcs)
-        self._val_generator = DataGenerator(
-            image_path=val_data.image_path, points_xml_path=val_data.points_xml_path, **gen_arcs)
-
-        assert getattr(self._data_generator, 'nr_keypoints') == getattr(self._val_generator, 'nr_keypoints'),\
-            "Validation Data has not same number of keypoint classes as Training Data"
-        self._nr_keypoints = getattr(self._data_generator, 'nr_keypoints')
+        # build model
         self.model = self._build_model()
         self._compile_model()
-
-        # set up save directory
-        self._save_dir = save_dir
-        if not os.path.exists(os.path.join(os.curdir, self._save_dir)):
-            os.makedirs(self._save_dir)
 
     def _build_model(self):
         """
@@ -129,12 +114,19 @@ class PointDetector:
         self.model.compile(optimizer=optimizer, loss="mse",
                            metrics=["mae", "mse"])
 
-    def fit(self, epochs: int = 40):
+    def fit(self,  image_data: DataGeneratorInputs,
+            val_data: DataGeneratorInputs, epochs: int = 40, save_dir: str = "save_dir"):
         """
         @brief perform training of point detector and creates tensorboard logdir
         @param epoch number of epochs to train network
+        @param image_data DataGeneratorInputs namedtuple with image path and path of points exported as CVAT xml
+        @param val_data DataGeneratorInputs namedtuple with val image path and path of points exported as CVAT xml
+        @save_dir directory to save trained model and training stats
         @return keras.callbacks.History object
         """
+        self.setup_datagenerator(image_data, val_data)
+        self.setup_savedir(save_dir)
+
         run_logdir = os.path.join(
             self._save_dir,
             datetime.datetime.now(pytz.timezone("Europe/Berlin")).strftime(
@@ -158,6 +150,36 @@ class PointDetector:
             self._save_dir), f'final_trained_weigths_with_{epochs}_epochs.h5')
         return history
 
+    def setup_savedir(self, save_dir: str):
+        """
+        @brief stup save dir and mkdir if not exists
+        @save_dir directory to save trained model and training stats
+        """
+        self._save_dir = save_dir
+        if not os.path.exists(os.path.join(os.curdir, self._save_dir)):
+            os.makedirs(self._save_dir)
+
+    def setup_datagenerator(self, image_data: DataGeneratorInputs, val_data: DataGeneratorInputs):
+        """
+        @brief setup data generators for training
+        @param image_data DataGeneratorInputs namedtuple with image path and path of points exported as CVAT xml
+        @param val_data DataGeneratorInputs namedtuple with val image path and path of points exported as CVAT xml
+        """
+        gen_arcs = {
+            "image_size": self._input_shape[:2],
+            "batch_size": self._batch_size,
+            "sigma": self._sigma,
+        }
+        self._data_generator = DataGenerator(
+            image_path=image_data.image_path, points_xml_path=image_data.points_xml_path, **gen_arcs)
+        self._val_generator = DataGenerator(
+            image_path=val_data.image_path, points_xml_path=val_data.points_xml_path, **gen_arcs)
+
+        assert getattr(self._data_generator, 'nr_keypoints') == getattr(self._val_generator, 'nr_keypoints'),\
+            "Validation Data has not same number of keypoint classes as Training Data"
+        assert self._nr_keypoints == getattr(
+            self._data_generator, 'nr_keypoints')
+
     def __repr__(self):
         return f"Point Detector network. Keypoints: {self._nr_keypoints}\
                 input_shape = {self._input_shape}"
@@ -170,6 +192,13 @@ class PointDetector:
 
     def predict(self, data_generator: DataGenerator) -> np.ndarray:
         return self._model.predict_generator(data_generator)
+
+    def predict_img(self, img: np.ndarray) -> np.ndarray:
+        return self.model.predict(img[np.newaxis, ...]
+                                  if len(img.shape) == 3 else img)
+
+    def load_weights(self, modelpath: str):
+        self.model.load_weights(modelpath)
 
     @property
     def model(self):
