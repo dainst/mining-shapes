@@ -12,8 +12,8 @@ import glob
 from xml.dom import minidom
 from tqdm import tqdm
 
-
-sys.path.append(os.path.abspath('../'))
+# pylint: disable=import-error
+sys.path.append(os.path.abspath('/home/Code'))
 from dataset_utils.dashed_augmentation.main import augment_to_dashed_profile  # noqa: E402
 from dataset_utils.outlined_augmentation.main import augment_to_outlined_profile  # noqa: E402
 from dataset_utils.data_split.main import copy_images_to_path, make_output_directory, create_image_list  # noqa: E402
@@ -54,7 +54,7 @@ def split_data(_args) -> str:
 
 
 def is_image_valid(image_name: str, mask_p: str) -> bool:
-    if 'ZenonID' in image_name and image_name in os.listdir(mask_p):
+    if image_name in os.listdir(mask_p):
         return True
     else:
         return False
