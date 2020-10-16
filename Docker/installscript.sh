@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # install build utilities
 apt-get update && apt-get install -y gcc make apt-transport-https ca-certificates build-essential
 
