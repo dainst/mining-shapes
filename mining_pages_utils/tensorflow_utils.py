@@ -17,16 +17,63 @@ from object_detection.utils import dataset_util, ops
 sys.path.append(os.path.abspath('/home/Code/Normalize_Shape'))
 from point_detector import PointDetector  # noqa: E402
 
-
-def create_tf_example(group, path):
-    with tf.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
+def create_tf_example_new(group, path):
+    with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
         encoded_jpg = fid.read()
     encoded_jpg_io = io.BytesIO(encoded_jpg)
     image = Image.open(encoded_jpg_io)
     width, height = image.size
-
+    fileid = os.path.basename(group.filename)
+    fileid= fileid.encode('utf8')
     filename = group.filename.encode('utf8')
-    image_format = b'jpg'
+    image_format = b'png'
+    xmins = []
+    xmaxs = []
+    ymins = []
+    ymaxs = []
+    classes_text = []
+    classes = []
+
+    for index, row in group.object.iterrows():
+        box = row['detection_boxes']
+        ymin, xmin, ymax, xmax = box
+        xmins.append(xmin)
+        xmaxs.append(xmax)
+        ymins.append(ymin)
+        ymaxs.append(ymax)
+        classes_text.append(row['detection_classesname'].encode('utf8'))
+        classes.append(int(row['detection_classes']))
+    tf_example = tf.train.Example(features=tf.train.Features(feature={
+        'image/height': dataset_util.int64_feature(height),
+        'image/width': dataset_util.int64_feature(width),
+        'image/filename': dataset_util.bytes_feature(fileid),
+        # 'image/source_id': dataset_util.bytes_feature(filename),
+        'image/source_id': dataset_util.bytes_feature(fileid),
+        'image/encoded': dataset_util.bytes_feature(encoded_jpg),
+        'image/format': dataset_util.bytes_feature(image_format),
+        'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),
+        'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
+        'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
+        'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
+        'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
+        'image/object/class/label': dataset_util.int64_list_feature(classes),
+    }))
+    return tf_example
+ 
+    return tf_example
+
+
+def create_tf_example(group, path):
+    imgpath = group['page_path']
+    image_string = tf.io.read_file(imgpath)
+    #with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
+    image_shape = tf.image.decode_png(image_string).shape
+    #idth, height = image.size
+
+    #filename = group.filename.encode('utf8')
+    #print(group.filename)
+    #fileid = group['page_imgname'].encode('utf8')
+    #image_format = b'png'
     xmins = []
     xmaxs = []
     ymins = []
@@ -45,6 +92,7 @@ def create_tf_example(group, path):
         classes.append(int(row['detection_classes']))
 
     tf_example = tf.train.Example(features=tf.train.Features(feature={
+
         'image/height': dataset_util.int64_feature(height),
         'image/width': dataset_util.int64_feature(width),
         'image/filename': dataset_util.bytes_feature(filename),
@@ -62,9 +110,11 @@ def create_tf_example(group, path):
 
 
 def create_tf_figid(group, path):
+    imgpath = group['page_path']
+    image_string = tf.io.read_file(imgpath)
 
-    with tf.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
-        encoded_jpg = fid.read()
+    #with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
+        #encoded_jpg = fid.read()
     encoded_jpg_io = io.BytesIO(encoded_jpg)
     image = Image.open(encoded_jpg_io)
     width, height = image.size
@@ -95,7 +145,7 @@ def create_tf_figid(group, path):
         'image/height': dataset_util.int64_feature(height),
         'image/width': dataset_util.int64_feature(width),
         'image/filename': dataset_util.bytes_feature(filename),
-        'image/source_id': dataset_util.bytes_feature(filename),
+        'image/source_id': dataset_util.bytes_feature(os.path.basename(filename)),
         'image/encoded': dataset_util.bytes_feature(encoded_jpg),
         'image/format': dataset_util.bytes_feature(image_format),
         'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),
@@ -108,7 +158,7 @@ def create_tf_figid(group, path):
     return tf_example
 
 
-def run_inference_for_page_series(series: pd.Series, tensor_dict: dict, session: tf.compat.v1.Session) -> pd.Series:
+def run_inference_for_page_series(series, tensor_dict: dict, session: tf.compat.v1.Session):
     """
     @brief runs object detection network on page image and appends detection result to series
     @param series pandas Series with image data located in column 'page_imgnp'
@@ -117,16 +167,16 @@ def run_inference_for_page_series(series: pd.Series, tensor_dict: dict, session:
     """
     image = series['page_imgnp']
     output_dict = run_inference(tensor_dict, image, session)
-
+    del image
     # all outputs are float32 numpy arrays, so convert types as appropriate
     output_dict['num_detections'] = int(output_dict['num_detections'][0])
-    output_dict['detection_classes'] = output_dict[
-        'detection_classes'][0].astype(np.uint8)
+    output_dict['detection_classes'] = output_dict['detection_classes'][0].astype(np.uint8)
     output_dict['detection_boxes'] = output_dict['detection_boxes'][0]
     output_dict['detection_scores'] = output_dict['detection_scores'][0]
     if 'detection_masks' in output_dict:
         output_dict['detection_masks'] = output_dict['detection_masks'][0]
     series['page_detections'] = output_dict
+    del output_dict
     return series
 
 
@@ -184,8 +234,7 @@ def run_inference(tensor_dict: dict, image: np.ndarray, session: tf.compat.v1.Se
     image_tensor = tf.get_default_graph().get_tensor_by_name('image_tensor:0')
 
     # Run inference
-    output_dict = session.run(tensor_dict,
-                              feed_dict={image_tensor: np.expand_dims(image, 0)})
+    output_dict = session.run(tensor_dict, feed_dict={image_tensor: np.expand_dims(image, 0)})
 
     return output_dict
 

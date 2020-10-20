@@ -3,12 +3,9 @@ import numpy as np
 import pandas as pd
 import uuid
 import os
-from pdf2image import convert_from_path
+import nltk
+import re
 
-def pdf_to_image(pdf_path):
-    path = os.path.dirname(pdf_path)
-    name = os.path.basename(pdf_path)
-    convert_from_path(pdf_path, dpi=300, fmt='png', thread_count=4, output_file=name, output_folder=path)
 
 def double_to_singlepage(dataframe, splitpercent):
     print(dataframe['page_path'])
@@ -21,6 +18,15 @@ def double_to_singlepage(dataframe, splitpercent):
     cv2.imwrite(dataframe['page_path'].replace('.png','-left.png'), pageleft_imgnp)
     cv2.imwrite(dataframe['page_path'].replace('.png','-right.png'), pageright_imgnp)
 
+def clean_figid(dataframe):
+    text = dataframe['figid_raw']
+    print(text)
+    regexp = dataframe['figid_regex']
+    dataframe['figid_clean'] = re.findall(regexp, text)
+    return dataframe
+    
+
+    #dataframe['figid_clean'] = dataframe['figid_raw']
 
 
 def cut_image(dataframe: pd.DataFrame) -> np.ndarray:
@@ -86,7 +92,7 @@ def load_figure(series: pd.Series) -> pd.Series:
     return load_image_from_pdseries(series, 'figure_path', 'figure')
 
 
-def load_page(series: pd.Series) -> pd.Series:
+def load_page(series):
     """
     @brief Loads page image from given series
     @return Series with page data
@@ -94,7 +100,7 @@ def load_page(series: pd.Series) -> pd.Series:
     return load_image_from_pdseries(series, 'page_path', 'page')
 
 
-def load_image_from_pdseries(series: pd.Series, column_name: str, col_base_name: str):
+def load_image_from_pdseries(series, column_name: str, col_base_name: str):
     """
     @brief Loads image from path given in pd series
     @param series pandas Series
@@ -103,6 +109,7 @@ def load_image_from_pdseries(series: pd.Series, column_name: str, col_base_name:
     @return pdSeries which in includes image data and image dimensions
     """
     page_imgnp = cv2.imread(str(series[column_name]))
+    print(str(series[column_name]))
     assert len(page_imgnp.shape) == 3
     page_height, page_width, page_channel = page_imgnp.shape
     series[f'{col_base_name}_width'] = page_width
@@ -142,8 +149,15 @@ def ocr_pre_processing(image: np.ndarray) -> np.ndarray:
 
 
 def ocr_post_processing_pageid(row):
-    pageid_raw = row['pageid_raw']
-    row['pageid_int'] = [int(s) for s in pageid_raw.split() if s.isdigit()]
+    pageid_raw = row['pageid_raw'].replace("\n","")
+    pageid_raw = pageid_raw.replace(' ','')
+    pageid_regex = re.compile(row['pageid_regex'])
+    result = re.search(pageid_regex, pageid_raw)
+    if result:
+        row['pageid_clean'] = result
+    else:
+        row['pageid_clean'] = ''
+
     return row
 
 

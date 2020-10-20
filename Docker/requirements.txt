@@ -15,3 +15,5 @@ tqdm
 autopep8
 segmentation-models
 pdf2image
+nltk
+pyyaml
