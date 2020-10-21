@@ -3,10 +3,33 @@ import numpy as np
 import os
 import yaml
 import re
+import inflect
 from collections import namedtuple
 
 from object_detection.utils import label_map_util
 from pdf2image import convert_from_path
+
+def humanreadID(Series):
+    humanreadID = ''
+    for element in Series['patternHRID']:
+        if Series[element] is not 'none':
+            humanreadID += Series[element] + '_'
+        if Series[element] is 'none':
+            humanreadID += Series[element] + '_' 
+            humanreadID += str(Series['figure_tmpid'])
+        
+    Series['HRID'] = humanreadID.rstrip('_')
+    return Series
+
+def handleduplicate_humanreadID(df):
+    p = inflect.engine()
+    g = df.groupby('HRID')
+    df.HRID += g.cumcount().add(1).map(p.ordinal).radd('_DUP').mask(g.HRID.transform('count')==1,'')
+        
+    return df
+
+    
+
 
 def pdf_to_image(dataframe):
     if(pd.notnull(dataframe['pubpdf_path'])):

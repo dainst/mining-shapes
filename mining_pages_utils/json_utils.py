@@ -25,7 +25,7 @@ def create_find_JSONL(df: pd.DataFrame, file: TextIO):
 def create_constructivisttype_JSONL(df: pd.DataFrame, file: TextIO):
     TYPE_template = '{"category":"","identifier":"","relations":{"isChildOf":""}}'
     TYPE = json.loads(TYPE_template)
-    TYPE["identifier"] = 'Type_' + str(df['figure_tmpid'])
+    TYPE["identifier"] = str(df['HRID'])
     TYPE["category"] = 'Type'
     relations = TYPE["relations"]
     relations["isChildOf"] = 'Catalog_' + \
@@ -34,9 +34,9 @@ def create_constructivisttype_JSONL(df: pd.DataFrame, file: TextIO):
     file.write("\n")
 
 def create_normativtype_JSONL(df: pd.DataFrame, file: TextIO):
-    TYPE_template = '{"category":"","identifier":"", "shortDescription":"none","literature":[{"quotation":"none","zenonId":""}],"relations":{"isChildOf":"","isDepictedIn":[]}}'
+    TYPE_template = '{"category":"","identifier":"", "shortDescription":"Extracted by Mining Shapes","literature":[{"quotation":"none","zenonId":""}],"relations":{"isChildOf":"","isDepictedIn":[]}}'
     TYPE = json.loads(TYPE_template)
-    TYPE["identifier"] = 'Type_' + str(df['figure_tmpid'])
+    TYPE["identifier"] = str(df['HRID'])
     TYPE["category"] = 'Type'
     relations = TYPE["relations"]
     relations["isChildOf"] = 'Catalog_' + \
@@ -51,13 +51,13 @@ def create_normativtype_JSONL(df: pd.DataFrame, file: TextIO):
     literature0 = literature[0]
     literature0['zenonId'] = str(df['pub_value'])
 
-    literature0['quotation'] = 'p. ' + str(df['pageid_raw']) + ', fig. ' + str(df['figid_raw'])
+    literature0['quotation'] = 'p. ' + str(df['pageid_clean']) + ', fig. ' + str(df['figid_clean'])
     json.dump(TYPE, file)
     file.write("\n")
 
 
 def create_drawing_JSONL(df: pd.DataFrame, file: TextIO):
-    DRAWING_template = '{"category":"","identifier":"", "description":"none","literature":[{"quotation":"none","zenonId":""}]}'
+    DRAWING_template = '{"category":"","identifier":"", "description":"Extracted by Mining Shapes","literature":[{"quotation":"none","zenonId":""}]}'
     DRAWING = json.loads(DRAWING_template)
     DRAWING["identifier"] = str(df['figure_tmpid']) + '.png'
     DRAWING["category"] = 'Drawing'
@@ -67,15 +67,14 @@ def create_drawing_JSONL(df: pd.DataFrame, file: TextIO):
     literature = DRAWING["literature"]
     literature0 = literature[0]
     literature0['zenonId'] = str(df['pub_value'])
-
-    literature0['quotation'] = 'p. ' + str(df['pageid_raw']) + ', fig. ' + str(df['figid_raw'])
+    literature0['quotation'] = 'p. ' + str(df['pageid_clean']) + ', fig. ' + str(df['figid_clean'])
 
     json.dump(DRAWING, file)
     file.write("\n")
 
 
 def create_catalog_JSONL(df: pd.DataFrame, file: TextIO):
-    CATALOG_template = '{"category":"","identifier":"","shortDescription":"In what aspects differ types in this catalog and what do they have in common?", "relations":{"isDepictedIn":[]}}'
+    CATALOG_template = '{"category":"","identifier":"","shortDescription":"Extracted by Mining Shapes", "relations":{"isDepictedIn":[]}}'
     CATALOG = json.loads(CATALOG_template)
     CATALOG["identifier"] = 'Catalog_' + \
         str(df['pub_key']) + '_' + str(df['pub_value'])

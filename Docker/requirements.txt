@@ -17,3 +17,4 @@ segmentation-models
 pdf2image
 nltk
 pyyaml
+inflect

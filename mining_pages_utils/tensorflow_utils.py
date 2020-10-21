@@ -59,8 +59,6 @@ def create_tf_example_new(group, path):
         'image/object/class/label': dataset_util.int64_list_feature(classes),
     }))
     return tf_example
- 
-    return tf_example
 
 
 def create_tf_example(group, path):
@@ -110,15 +108,13 @@ def create_tf_example(group, path):
 
 
 def create_tf_figid(group, path):
-    imgpath = group['page_path']
-    image_string = tf.io.read_file(imgpath)
-
-    #with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
-        #encoded_jpg = fid.read()
+    with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
+        encoded_jpg = fid.read()
     encoded_jpg_io = io.BytesIO(encoded_jpg)
     image = Image.open(encoded_jpg_io)
     width, height = image.size
-
+    fileid = os.path.basename(group.filename)
+    fileid= fileid.encode('utf8')
     filename = group.filename.encode('utf8')
     image_format = b'png'
     xmins = []
@@ -128,24 +124,21 @@ def create_tf_figid(group, path):
     classes_text = []
     classes = []
 
-    for _, row in group.object.iterrows():
-
-        filename = group.filename.encode('utf8')
+    for index, row in group.object.iterrows():
         box = row['figid_detection_boxes']
         ymin, xmin, ymax, xmax = box
         xmins.append(xmin)
         xmaxs.append(xmax)
         ymins.append(ymin)
         ymaxs.append(ymax)
-        classes_text.append(
-            str(row['figid_detection_classesname']).encode('utf8'))
+        classes_text.append(row['figid_detection_classesname'].encode('utf8'))
         classes.append(int(row['figid_detection_classes']))
-
     tf_example = tf.train.Example(features=tf.train.Features(feature={
         'image/height': dataset_util.int64_feature(height),
         'image/width': dataset_util.int64_feature(width),
-        'image/filename': dataset_util.bytes_feature(filename),
-        'image/source_id': dataset_util.bytes_feature(os.path.basename(filename)),
+        'image/filename': dataset_util.bytes_feature(fileid),
+        # 'image/source_id': dataset_util.bytes_feature(filename),
+        'image/source_id': dataset_util.bytes_feature(fileid),
         'image/encoded': dataset_util.bytes_feature(encoded_jpg),
         'image/format': dataset_util.bytes_feature(image_format),
         'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),

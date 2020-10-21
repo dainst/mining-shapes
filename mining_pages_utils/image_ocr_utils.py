@@ -7,6 +7,7 @@ import nltk
 import re
 
 
+
 def double_to_singlepage(dataframe, splitpercent):
     print(dataframe['page_path'])
     doublepage_imgnp = cv2.imread(dataframe['page_path'])
@@ -18,12 +19,6 @@ def double_to_singlepage(dataframe, splitpercent):
     cv2.imwrite(dataframe['page_path'].replace('.png','-left.png'), pageleft_imgnp)
     cv2.imwrite(dataframe['page_path'].replace('.png','-right.png'), pageright_imgnp)
 
-def clean_figid(dataframe):
-    text = dataframe['figid_raw']
-    print(text)
-    regexp = dataframe['figid_regex']
-    dataframe['figid_clean'] = re.findall(regexp, text)
-    return dataframe
     
 
     #dataframe['figid_clean'] = dataframe['figid_raw']
