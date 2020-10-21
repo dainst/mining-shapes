@@ -1,8 +1,12 @@
 FROM tensorflow/tensorflow:1.15.3
 
+#install dos2unix (needed to run shell scripts on Windows OS)
+RUN apt-get install -y dos2unix
+
 #install linux software
 COPY installscript.sh /tmp/installscript.sh
 RUN chmod +x /tmp/installscript.sh
+RUN dos2unix /tmp/installscript
 RUN /tmp/installscript.sh
 RUN rm /tmp/installscript.sh
 
@@ -15,6 +19,7 @@ RUN rm /tmp/requirements.txt
 #install object detection api
 COPY installobjectdetectionapi.sh /tmp/installobjectdetectionapi.sh
 RUN chmod +x /tmp/installobjectdetectionapi.sh
+RUN dos2unix /tmp/installobjectdetectionapi.sh
 RUN /tmp/installobjectdetectionapi.sh
 RUN rm /tmp/installobjectdetectionapi.sh
 
