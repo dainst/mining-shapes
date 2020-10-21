@@ -149,14 +149,28 @@ def ocr_pre_processing(image: np.ndarray) -> np.ndarray:
 
 
 def ocr_post_processing_pageid(row):
-    pageid_raw = row['pageid_raw'].replace("\n","")
-    pageid_raw = pageid_raw.replace(' ','')
+    pageid_raw = str(row['pageid_raw']).replace("\n","")
+    pageid_raw = str(pageid_raw).replace(' ','')
+    
     pageid_regex = re.compile(row['pageid_regex'])
     result = re.search(pageid_regex, pageid_raw)
     if result:
-        row['pageid_clean'] = result
+        row['pageid_clean'] = result.group(1)
     else:
-        row['pageid_clean'] = ''
+        row['pageid_clean'] = 'none'
+
+    return row
+
+def ocr_post_processing_figid(row):
+    figid_raw = str(row['figid_raw']).replace("\n","")
+    figid_raw = str(figid_raw).replace(' ','')
+    
+    figid_regex = re.compile(row['figid_regex'])
+    result = re.search(figid_regex, figid_raw)
+    if result:
+        row['figid_clean'] = result.group(1)
+    else:
+        row['figid_clean'] = 'none'
 
     return row
 

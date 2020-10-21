@@ -209,6 +209,7 @@ def filter_best_vesselprofile_detections(all_detections: pd.DataFrame, classlist
 
 def merge_info(all_detections: pd.DataFrame, bestpages_result: pd.DataFrame):
     if not bestpages_result.empty:
+        print(bestpages_result.detection_classesname.unique())
         for detection_classesname in bestpages_result.detection_classesname.unique():
             selected_info = bestpages_result[bestpages_result['detection_classesname']
                                             == detection_classesname]
@@ -216,10 +217,10 @@ def merge_info(all_detections: pd.DataFrame, bestpages_result: pd.DataFrame):
             selected_info = selected_info.rename(columns={'newinfo': newinfo_name})
             #all_detections = pd.DataFrame(columns=['pageid_raw', 'pageid_info'])
             all_detections = all_detections.merge(selected_info[[newinfo_name, 'pub_key', 'pub_value', 'page_imgname']], on=['pub_key', 'pub_value', 'page_imgname'], how='left')
-            if 'pageid_raw' not in all_detections.columns:
-                all_detections['pageid_raw'] = ''
-            if 'pageinfo_raw' not in all_detections.columns:
-                all_detections['pageinfo_raw'] = ''
+        if 'pageid_raw' not in all_detections.columns:
+            all_detections['pageid_raw'] = ''
+        if 'pageinfo_raw' not in all_detections.columns:
+            all_detections['pageinfo_raw'] = ''
     else:
         all_detections['pageid_raw'] = ''
         all_detections['pageinfo_raw'] = ''
