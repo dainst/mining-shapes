@@ -11,7 +11,7 @@ import pandas as pd
 from PIL import Image
 from typing import Tuple, List
 from object_detection.utils import dataset_util, ops
-#import segmentation_models as sm
+import segmentation_models as sm
 
 # pylint: disable=import-error
 sys.path.append(os.path.abspath('/home/Code/Normalize_Shape'))
@@ -263,7 +263,8 @@ def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath:
                 seg_img, (width_orig, height_orig)))
         else:
             seg_img = postprocess_image(seg_img, img_size, image.shape[:2],)
-            cv2.imwrite(os.path.join(segmentpath, img_name), seg_img)
+            cv2.imwrite(os.path.join(segmentpath, img_name), cv2.resize(
+                seg_img, (width_orig, height_orig)))
 
         prog_bar.update(1)
     prog_bar.close()
