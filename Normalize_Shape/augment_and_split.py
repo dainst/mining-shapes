@@ -150,7 +150,7 @@ if __name__ == "__main__":
                         help="Directory in which corresponding masks are located", required=True)
     parser.add_argument("--output", type=str,
                         help="directory in which splitted dataset will be saved", required=True)
-    parser.add_argument("--augment_data", type=bool,
-                        help="Apply data augmentations", default=True)
+    parser.add_argument("--augment_data", type=int,
+                        help="Apply data augmentations", default=1)
     args = parser.parse_args()
     split_augment_data(args)
