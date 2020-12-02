@@ -12,3 +12,8 @@ item {
 	id: 3
 	name: 'pageinfo'
 }
+
+item {
+	id: 3
+	name: 'vesselimage'
+}

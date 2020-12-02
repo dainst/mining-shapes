@@ -18,3 +18,4 @@ pdf2image
 nltk
 pyyaml
 inflect
+zipfile
