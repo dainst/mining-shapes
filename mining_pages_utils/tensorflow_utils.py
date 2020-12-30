@@ -4,9 +4,11 @@ import tensorflow as tf
 from tqdm import tqdm
 import io
 import os
+import time
 #import math
 import cv2
 import numpy as np
+from collections import namedtuple
 import pandas as pd
 from PIL import Image
 from typing import Tuple, List
@@ -17,7 +19,55 @@ import segmentation_models as sm
 sys.path.append(os.path.abspath('/home/Code/Normalize_Shape'))
 from point_detector import PointDetector  # noqa: E402
 
-def create_tf_example_new(group, path):
+def split(df, group):
+    data = namedtuple('data', ['filename', 'object'])
+    gb = df.groupby(group)
+    return [data(filename, gb.get_group(x)) for filename, x in zip(gb.groups.keys(), gb.groups)]
+
+def Df2TFrecord(df, imagecolumn, outpath):
+    if imagecolumn is 'page_path':
+        prefix = ''
+    if imagecolumn is 'figure_path':
+        prefix = 'figid_'
+    writer = tf.io.TFRecordWriter(outpath)
+    grouped = split(df, imagecolumn)
+    print(grouped)
+
+    for group in grouped:
+        tf_example = create_tf_example_new(group,  outpath, prefix)
+        writer.write(tf_example.SerializeToString())
+
+    writer.close()
+
+
+def loadtfrecord(path):
+    
+    dataset = tf.data.TFRecordDataset(path, compression_type=None, buffer_size=None, num_parallel_reads=None)
+    return dataset
+
+def writetfrecord(train,test, i):
+    test_writer = os.path.join(DIR, 'x0' +str(i) + "_test.tfrecord")
+    train_writer = os.path.join(DIR, 'x0' + str(i) + "_train.tfrecord")
+
+    writer = tf.data.experimental.TFRecordWriter(test_writer)
+    writer.write(test)
+    writer = tf.data.experimental.TFRecordWriter(train_writer)
+    writer.write(train)
+
+def build_detectfn(path):
+
+    print('Loading model...', end='')
+    start_time = time.time()
+
+    # Load saved model and build the detection function
+    miningpagedetect = tf.saved_model.load(path)
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print('Done! Took {} seconds'.format(elapsed_time))
+    return miningpagedetect
+
+def create_tf_example_new(group, path, prefix):
     with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
         encoded_jpg = fid.read()
     encoded_jpg_io = io.BytesIO(encoded_jpg)
@@ -33,16 +83,16 @@ def create_tf_example_new(group, path):
     ymaxs = []
     classes_text = []
     classes = []
-
+     
     for index, row in group.object.iterrows():
-        box = row['detection_boxes']
+        box = row[ prefix + 'detection_boxes']
         ymin, xmin, ymax, xmax = box
         xmins.append(xmin)
         xmaxs.append(xmax)
         ymins.append(ymin)
         ymaxs.append(ymax)
-        classes_text.append(row['detection_classesname'].encode('utf8'))
-        classes.append(int(row['detection_classes']))
+        classes_text.append(row[prefix +'detection_classesname'].encode('utf8'))
+        classes.append(int(row[prefix +'detection_classes']))
     tf_example = tf.train.Example(features=tf.train.Features(feature={
         'image/height': dataset_util.int64_feature(height),
         'image/width': dataset_util.int64_feature(width),

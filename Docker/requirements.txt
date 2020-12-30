@@ -18,4 +18,6 @@ pdf2image
 nltk
 pyyaml
 inflect
-zipfile
+zipfile38
+Shapely
+Rtree-linux

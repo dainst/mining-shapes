@@ -53,17 +53,17 @@ def cut_image_savetemp(dataframe: pd.DataFrame, outpath_base: str) -> pd.DataFra
     bbox_ymin = int((ymin)*dataframe['page_height'])
     bbox_xmax = int((xmax)*dataframe['page_width'])
     bbox_ymax = int((ymax)*dataframe['page_height'])
-    bbox_np = page_imgnp[bbox_ymin:bbox_ymax, bbox_xmin:bbox_xmax]
-    figure_height, figure_width, figure_channel = bbox_np.shape
+    figure_imgnp = page_imgnp[bbox_ymin:bbox_ymax, bbox_xmin:bbox_xmax]
+    del page_imgnp
+    figure_height, figure_width, figure_channel = figure_imgnp.shape
     dataframe['figure_height'] = figure_height
     dataframe['figure_width'] = figure_width
     dataframe['figure_channel'] = figure_channel
-    dataframe['figure_imgnp'] = bbox_np
     dataframe['figure_tmpid'] = uuid.uuid4()
     dataframe['figure_path'] = outpath_base + str(dataframe['figure_tmpid']) + '.png'
-    cv2.imwrite(str(dataframe['figure_path']), bbox_np)
+    cv2.imwrite(str(dataframe['figure_path']), figure_imgnp)
 
-    return dataframe
+    return dataframe, figure_imgnp
 
 
 def cut_image_figid(dataframe: pd.DataFrame) -> np.ndarray:
@@ -87,12 +87,17 @@ def load_figure(series: pd.Series) -> pd.Series:
     return load_image_from_pdseries(series, 'figure_path', 'figure')
 
 
-def load_page(series):
-    """
-    @brief Loads page image from given series
-    @return Series with page data
-    """
-    return load_image_from_pdseries(series, 'page_path', 'page')
+def load_page(row):
+    page_imgnp = cv2.imread(str(row['page_path']))
+    print(str(row['page_path']))
+    assert len(page_imgnp.shape) == 3
+    page_height, page_width, page_channel = page_imgnp.shape
+    row['page_width'] = page_width
+    row['page_height'] = page_height
+    row['page_channel'] = page_channel
+    #row['page_imgnp'] = page_imgnp
+
+    return row, page_imgnp
 
 
 def load_image_from_pdseries(series, column_name: str, col_base_name: str):

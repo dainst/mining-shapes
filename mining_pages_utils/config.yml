@@ -1,0 +1,12 @@
+pub_name: 'Bonifay2004'
+select_pdfpages: !!python/list
+  - !!python/tuple [40,46]
+  - !!python/tuple [76,77]
+pageid_regex: '.*?([0-9]{1,3}).*?'
+figid_regex: '.*?([0-9]{1,2}).*'
+level_groups_regex: '.*?([0-9]{1,2})\.([0-9]{1})\.([0-9]{1}).*'
+patternHRID: [pub_name,figid_clean]
+classlist: ['pageid', 'pageinfo']
+figureclasslist: ['vesselprofilefigure', 'infoframe', 'vesselimage']
+figureidclasslist: ['figureid']
+pageid_config: r'--psm 6 -c load_system_dawg=0 load_freq_dawg=0'

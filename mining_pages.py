@@ -1,3 +1,6 @@
+# To add a new cell, type '# %%'
+# To add a new markdown cell, type '# %% [markdown]'
+# %%
 
 from __future__ import division
 from __future__ import print_function
@@ -6,140 +9,175 @@ from distutils.version import StrictVersion
 import pytesseract
 import shutil
 import tensorflow as tf
+import re
 import pandas as pd
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'    # Suppress TensorFlow logging (1)
+import inflect
+import uuid
 
-from mining_pages_utils.image_ocr_utils import load_page, cut_image, ocr_pre_processing, cut_image_savetemp, cut_image_figid
-from mining_pages_utils.dataframe_utils import get_page_labelmap_as_df, get_figid_labelmap_as_df, extract_page_detections, extract_detections_figureidv2
-from mining_pages_utils.dataframe_utils import filter_best_page_detections, filter_best_vesselprofile_detections, merge_info, split, provide_pagelist
-from mining_pages_utils.json_utils import create_find_JSONL, create_type_JSONL, create_drawing_JSONL, create_catalog_JSONL, create_trench_JSONL
-from mining_pages_utils.tensorflow_utils import create_tf_example, create_tf_figid, run_inference_for_page_series, run_inference_for_figure_series
-
-
-INPUTDIRECTORY = '/home/images/apply'
-GRAPH = '/frozen_inference_graph.pb'
-LABELS = '/label_map.pbtxt'
-PAGE_MODEL = '/home/models/inference_graph_mining_pages_v8'
-FIGID_MODEL = '/home/models/inference_graph_figureid_v1'
-OUTPATH = '/home/images/OUTPUT/'
-VESSELLPATH = OUTPATH + 'vesselprofiles/'
-CSVOUT = OUTPATH + 'mining_pages_allinfo.csv'
-
-classlist = ['pageid', 'pageinfo']
-figureclasslist = ['vesselprofilefigure']
-figureidclasslist = ['figureid']
-pageid_config = r'--psm 6 -c load_system_dawg=0 load_freq_dawg=0'
-pagelist = provide_pagelist(INPUTDIRECTORY)
+from mining_pages_utils.image_ocr_utils import load_page, cut_image, ocr_pre_processing, ocr_post_processing_pageid, cut_image_savetemp, cut_image_figid, ocr_post_processing_figid
+from mining_pages_utils.dataframe_utils import get_page_labelmap_as_df, get_figid_labelmap_as_df, extract_page_detections, extract_page_detections_new,unfold_pagedetections, page_detections_toframe, extract_detections_figureidv2,humanreadID
+from mining_pages_utils.dataframe_utils import filter_best_page_detections, select_pdfpages, choose_pageid, filter_best_vesselprofile_detections, merge_info,  provide_pagelist, provide_pdf_path, get_pubs_and_configs, pdf_to_image, handleduplicate_humanreadID
+from mining_pages_utils.json_utils import create_find_JSONL, create_constructivisttype_JSONL, create_normativtype_JSONL, create_drawing_JSONL, create_catalog_JSONL, create_trench_JSONL
+from mining_pages_utils.tensorflow_utils import create_tf_example_new, create_tf_figid, run_inference_for_page_series, run_inference_for_figure_series, build_detectfn, Df2TFrecord, split
 
 
-
-if StrictVersion(tf.version.VERSION) < StrictVersion('1.9.0'):
+if StrictVersion(tf.version.VERSION) < StrictVersion('2.3.0'):
     raise ImportError(
         'Please upgrade your TensorFlow installation to v1.9.* or later!')
 
+tf.get_logger().setLevel('ERROR')           # Suppress TensorFlow logging (2)
 
-detection_graph = tf.Graph()
-with detection_graph.as_default():
-    od_graph_def = tf.compat.v1.GraphDef()
-    with tf.io.gfile.GFile(PAGE_MODEL + GRAPH, 'rb') as fid:
-        serialized_graph = fid.read()
-        od_graph_def.ParseFromString(serialized_graph)
-        tf.import_graph_def(od_graph_def, name='')
+# Enable GPU dynamic memory allocation
+gpus = tf.config.experimental.list_physical_devices('GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 
-
-with detection_graph.as_default():
-    with tf.Session() as sess:
-        # Get handles to input and output tensors
-        ops = tf.get_default_graph().get_operations()
-        all_tensor_names = {
-            output.name for op in ops for output in op.outputs}
-        tensor_dict = {}
-        for key in [
-            'num_detections', 'detection_boxes', 'detection_scores',
-            'detection_classes', 'detection_masks'
-        ]:
-            tensor_name = key + ':0'
-            if tensor_name in all_tensor_names:
-                tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
-                    tensor_name)
-
-        all_detections_step1 = pd.DataFrame()
-
-        for index, row in pagelist.iterrows():
-
-            img = load_page(row)
-            result = run_inference_for_page_series(img, tensor_dict, sess)
-            result.drop("page_imgnp", inplace=True)
-            all_detections_step1 = all_detections_step1.append(result)
+INPUTDIRECTORY = '/home/images/apply' 
+GRAPH = '/frozen_inference_graph.pb'
+LABELS = '/label_map.pbtxt'
+PAGE_MODEL = '/home/models/faster_rcnn_resnet101_v1_1024x1024_coco17_miningpagesv9'
+SAVEDMODEL = '/saved_model'
+FIGID_MODEL = '/home/models/faster_rcnn_resnet101_v1_1024x1024_coco17_miningfiguresv3'
+SEG_MODEL = '/home/models/shape_segmentation/train_colab_20200610.h5'
+OUTPATH = '/home/images/OUTPUT/'
+VESSELLPATH = OUTPATH + 'vesselprofiles/'
+SEGMENTPATH = OUTPATH + 'segmented_profiles/'
+CSVOUT = OUTPATH + 'mining_pages_allinfo.csv'
+CLEANCSVOUT = OUTPATH + 'mining_pages_clean.csv'
 
 
-all_detections_step2 = extract_page_detections(
-    all_detections_step1, category_index=get_page_labelmap_as_df(PAGE_MODEL + LABELS))
 
-bestpages = filter_best_page_detections(all_detections_step2, classlist, lowest_score=0.7)
+
+
+
+
+
+# %%
+publist = get_pubs_and_configs(INPUTDIRECTORY)
+pdflist = provide_pdf_path(publist)
+pdflistv2 = pdflist.apply(pdf_to_image, axis=1)
+pagelist = provide_pagelist(pdflistv2)
+pagelist = select_pdfpages(pagelist)
+
+
+
+
+# %%
+
+for path in [VESSELLPATH, SEGMENTPATH]:
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+
+
+
+
+
+all_detections_step1 = pd.DataFrame()
+miningpagesdetectfn = build_detectfn(PAGE_MODEL + SAVEDMODEL)
+for index, row in pagelist.iterrows():
+    print('Page ' + os.path.basename(row['page_path']))
+
+    row, page_imgnp = load_page(row)
+    input_tensor = tf.convert_to_tensor(page_imgnp)
+    input_tensor = input_tensor[tf.newaxis, ...]
+    detections = miningpagesdetectfn(input_tensor)
+    del page_imgnp
+    del input_tensor
+    num_detections = int(detections.pop('num_detections'))
+    detections = {key: value[0, :num_detections].numpy()
+                   for key, value in detections.items()}
+    detections['num_detections'] = num_detections
+    row['page_detections']= detections
+    all_detections_step1 = all_detections_step1.append(row)
+
+
+
+
+
+
+
+
+
+# %%
+#all_detections_step2, keylist =unfold_pagedetections(all_detections_step1)
+#all_detections_step22 = extract_page_detections(all_detections_step2, keylist, category_index=get_page_labelmap_as_df(PAGE_MODEL + LABELS))
+all_detections_step2 = page_detections_toframe(all_detections_step1).drop(columns='page_detections')
+
+page_category_index = get_page_labelmap_as_df(PAGE_MODEL + LABELS)
+all_detections_step2 = all_detections_step2.merge(page_category_index, on=['detection_classes'], how='left')
+
+
+# %%
+pageids = filter_best_page_detections(all_detections_step2 , lowest_score=0.8)
+bestpages = choose_pageid(pageids)
 pageid_raw = pd.DataFrame()
 
-# perform ocr page number
+#perform ocr page number
 for index, row in bestpages.iterrows():
     img = cut_image(row)
     img2 = ocr_pre_processing(img)
-    result = pytesseract.image_to_string(img2, config=pageid_config)
+    result = pytesseract.image_to_string(img2, config=row['pageid_config'])
     row['newinfo'] = result
+    
     pageid_raw = pageid_raw.append(row)
-
 all_detections_step3 = merge_info(all_detections_step2, pageid_raw)
-figures = filter_best_vesselprofile_detections(all_detections_step3, figureclasslist,lowest_score= 0.7)
+all_detections_step3 = all_detections_step3.apply(ocr_post_processing_pageid, axis=1)
 
+figures = filter_best_vesselprofile_detections(all_detections_step3, lowest_score= 0.7)
+
+
+# %%
 #detect figure id
-detection_figureid_graph = tf.Graph()
-with detection_figureid_graph.as_default():
-    od_graph_def = tf.compat.v1.GraphDef()
-    with tf.io.gfile.GFile(FIGID_MODEL + GRAPH, 'rb') as fid:
-        serialized_graph = fid.read()
-        od_graph_def.ParseFromString(serialized_graph)
-        tf.import_graph_def(od_graph_def, name='')
 
 
-with detection_figureid_graph.as_default():
-    with tf.Session() as sess:
-        # Get handles to input and output tensors
-        ops = tf.get_default_graph().get_operations()
-        all_tensor_names = {
-            output.name for op in ops for output in op.outputs}
+figures_step1 = pd.DataFrame()
+miningfiguresdetectfn = build_detectfn(FIGID_MODEL + SAVEDMODEL)
+for index, row in figures.iterrows():
+    print('Figure from ' + os.path.basename(row['page_path']))
+    row, figure_imgnp = cut_image_savetemp(row, VESSELLPATH)
+    input_tensor = tf.convert_to_tensor(figure_imgnp)
+    input_tensor = input_tensor[tf.newaxis, ...]
+    detections = miningfiguresdetectfn(input_tensor)
+    del figure_imgnp
+    del input_tensor
+    num_detections = int(detections.pop('num_detections'))
+    
+    detections = {'figid_' + key: value[0, :num_detections].numpy()
+                   for key, value in detections.items()}
+    row['figid_detections'] = detections
+    detections['figid_num_detections'] = num_detections
+    row = extract_detections_figureidv2(row)         
+    figures_step1 = figures_step1.append(row)
 
-        tensor_dict = {}
-        for key in [
-            'num_detections', 'detection_boxes', 'detection_scores',
-            'detection_classes', 'detection_masks'
-        ]:
-            tensor_name = key + ':0'
-            if tensor_name in all_tensor_names:
-                tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
-                    tensor_name)
-
-        figures_step1 = pd.DataFrame()
-
-        for index, row in figures.iterrows():
-            img = cut_image_savetemp(row, VESSELLPATH)
-            result = run_inference_for_figure_series(
-                img, tensor_dict, sess)
-            result.drop("figure_imgnp", inplace=True)
-            figures_step1 = figures_step1.append(result)
+figid_category_index = get_figid_labelmap_as_df(PAGE_MODEL + LABELS)
+figures_step2 = figures_step1.merge(
+figid_category_index, on=['figid_detection_classes'], how='left')
 
 
-figid_category_index = get_figid_labelmap_as_df(FIGID_MODEL + LABELS)
-figid_detections = figures_step1.apply(
-    extract_detections_figureidv2, axis=1)
-figures_step2 = figid_detections.merge(
-    figid_category_index, on=['figid_detection_classes'], how='left')
 
+
+
+# %%
 #perform ocr figid
 figures_step3 = pd.DataFrame()
 for index, row in figures_step2.iterrows():
+    print('OCR ' + os.path.basename(row['figure_path']))
     img = cut_image_figid(row)
     img2 = ocr_pre_processing(img)
-    row['figid_raw'] = pytesseract.image_to_string(img2, config=pageid_config)
+    row['figid_raw'] = pytesseract.image_to_string(img2, config=row['pageid_config'])
+    del img
+    del img2
     figures_step3 = figures_step3.append(row)
+figures_step3 = figures_step3.apply(ocr_post_processing_figid, axis=1)
+figures_step3 = figures_step3.apply(humanreadID, axis=1)
+figures_step3 = handleduplicate_humanreadID(figures_step3)
 
+
+# %%
 
 with open(OUTPATH + 'catalogs.jsonl', 'w') as f:
     pubs = figures_step3[['pub_key', 'pub_value']].drop_duplicates()
@@ -148,38 +186,66 @@ with open(OUTPATH + 'trenches.jsonl', 'w') as f:
     pubs = figures_step3[['pub_key', 'pub_value']].drop_duplicates()
     pubs.apply(create_trench_JSONL, file=f, axis=1)
 with open(OUTPATH + 'types.jsonl', 'w') as f:
-    figures_step3.apply(create_type_JSONL, file=f, axis=1)
+    figures_step3.apply(create_constructivisttype_JSONL, file=f, axis=1)
+with open(OUTPATH + 'types_standalone.jsonl', 'w') as f:
+    figures_step3.apply(create_normativtype_JSONL, file=f, axis=1)
 with open(OUTPATH + 'finds.jsonl', 'w') as f:
     figures_step3.apply(create_find_JSONL, file=f, axis=1)
 with open(OUTPATH + 'drawings.jsonl', 'w') as f:
     figures_step3.apply(create_drawing_JSONL, file=f, axis=1)
 
 
-TFRECORDOUT = OUTPATH + 'mining_pages.tfrecord'
-writer = tf.io.TFRecordWriter(TFRECORDOUT)
 
-shutil.copyfile(PAGE_MODEL + LABELS, OUTPATH + 'pages_label_map.pbtxt')
+
+
+
+
+figures_step3.to_csv(CSVOUT)
+figures_clean = figures_step3[['pub_key','pub_value','figure_tmpid','HRID','detection_scores', 'detection_classesname','page_imgname','pageid_raw','figid_raw','pageid_clean','figid_clean','pageinfo_raw','figure_path','page_path']]
+figures_clean.to_csv(CLEANCSVOUT)
+
+
+#Profile segmentation
+#print('Perform image segmentation')
+#run_vesselprofile_segmentation(VESSELLPATH, SEGMENTPATH, SEG_MODEL)
+
+
+# %%
+shutil.copyfile(PAGE_MODEL + LABELS, OUTPATH +'pages_label_map.pbtxt')
 
 mining_pages_detections = figures_step3.append(bestpages)
-grouped = split(mining_pages_detections, 'page_path')
+mining_pages_detections2 = mining_pages_detections.reindex(axis=0)
+pages_grouped = mining_pages_detections2.groupby('pub_name')
 
-for group in grouped:
-    tf_example = create_tf_example(group,  TFRECORDOUT)
-    writer.write(tf_example.SerializeToString())
-
-writer.close()
-
-TFRECORDOUT = OUTPATH + 'mining_figures.tfrecord'
-writer = tf.io.TFRecordWriter(TFRECORDOUT)
+for name, group in pages_grouped:
+    imgdir = os.path.join(OUTPATH, name + '_pages/')
+    if not os.path.exists(imgdir):
+        os.makedirs(imgdir)
+    Df2TFrecord(group, 'page_path', OUTPATH + name +'_pages.tfrecord')
+    for index, row in group.iterrows():
+        imgoutpath = imgdir + os.path.basename(row['page_path'])
+        print(imgoutpath)
+        if not os.path.exists(imgoutpath):
+            shutil.copyfile(row['page_path'], imgoutpath)
 
 shutil.copyfile(FIGID_MODEL + LABELS, OUTPATH + 'figures_label_map.pbtxt')
-figids = figures_step3[figures_step3.figid_detection_boxes.notnull()]
+figures_step3 = figures_step3[figures_step3.detection_boxes.notnull()]
 
-figsgrouped = split(figids, 'figure_path')
+figures_grouped = figures_step3.groupby('pub_name')
 
-for group in figsgrouped:
-    figtf_example = create_tf_figid(group,  TFRECORDOUT)
-    writer.write(figtf_example.SerializeToString())
+for name, group in figures_grouped:
+    imgdir = os.path.join(OUTPATH, name + '_figures/')
+    if not os.path.exists(imgdir):
+        os.makedirs(imgdir)
+    Df2TFrecord(group, 'figure_path', OUTPATH + name +'_figures.tfrecord')
+    for index, row in group.iterrows():
+        imgoutpath = imgdir + os.path.basename(str(row['figure_path']))
+        print(imgoutpath)
+        if not os.path.exists(imgoutpath):
+            shutil.copyfile(row['figure_path'], imgoutpath)
 
-writer.close()
-figures_step3.to_csv(CSVOUT)
+
+# %%
+
+
+
