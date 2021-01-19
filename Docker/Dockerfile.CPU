@@ -6,7 +6,7 @@ RUN apt-get install -y dos2unix
 #install linux software
 COPY installscript.sh /tmp/installscript.sh
 RUN chmod +x /tmp/installscript.sh
-RUN dos2unix /tmp/installscript
+RUN dos2unix /tmp/installscript.sh
 RUN /tmp/installscript.sh
 RUN rm /tmp/installscript.sh
 

@@ -20,4 +20,4 @@ pyyaml
 inflect
 zipfile38
 Shapely
-Rtree-linux
+Rtree
