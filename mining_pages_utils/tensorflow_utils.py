@@ -288,6 +288,8 @@ def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath:
     @param vesselpath directory of vesselprofile images
     @param path to store segmented images
     @param modelpath location of saved model weights. Weights should be stored in .h5 format
+    @param mark_black_img append black_ to image name if segmented image is all black
+    @param resize_img resize image back to its original shape after segmentation
     """
     vessel_image_list = os.listdir(vesselpath)
 
@@ -309,12 +311,17 @@ def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath:
         seg_img = (np.argmax(seg_img[0], axis=2) * 255).astype(np.uint8)
 
         if is_img_black(seg_img):
-            cv2.imwrite(os.path.join(segmentpath, f"trash_{img_name}"), cv2.resize(
-                seg_img, (width_orig, height_orig)))
+            save_path = os.path.join(
+                segmentpath, f"black_{img_name}" if mark_black_img else img_name)
         else:
             seg_img = postprocess_image(seg_img, img_size, image.shape[:2],)
-            cv2.imwrite(os.path.join(segmentpath, img_name), cv2.resize(
+            save_path = os.path.join(segmentpath, img_name)
+
+        if resize_img:
+            cv2.imwrite(save_path, cv2.resize(
                 seg_img, (width_orig, height_orig)))
+        else:
+            cv2.imwrite(save_path, seg_img)
 
         prog_bar.update(1)
     prog_bar.close()
