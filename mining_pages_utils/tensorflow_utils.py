@@ -19,10 +19,12 @@ import segmentation_models as sm
 sys.path.append(os.path.abspath('/home/Code/Normalize_Shape'))
 from point_detector import PointDetector  # noqa: E402
 
+
 def split(df, group):
     data = namedtuple('data', ['filename', 'object'])
     gb = df.groupby(group)
     return [data(filename, gb.get_group(x)) for filename, x in zip(gb.groups.keys(), gb.groups)]
+
 
 def Df2TFrecord(df, imagecolumn, outpath):
     if imagecolumn is 'page_path':
@@ -41,18 +43,21 @@ def Df2TFrecord(df, imagecolumn, outpath):
 
 
 def loadtfrecord(path):
-    
-    dataset = tf.data.TFRecordDataset(path, compression_type=None, buffer_size=None, num_parallel_reads=None)
+
+    dataset = tf.data.TFRecordDataset(
+        path, compression_type=None, buffer_size=None, num_parallel_reads=None)
     return dataset
 
-def writetfrecord(train,test, i):
-    test_writer = os.path.join(DIR, 'x0' +str(i) + "_test.tfrecord")
+
+def writetfrecord(train, test, i):
+    test_writer = os.path.join(DIR, 'x0' + str(i) + "_test.tfrecord")
     train_writer = os.path.join(DIR, 'x0' + str(i) + "_train.tfrecord")
 
     writer = tf.data.experimental.TFRecordWriter(test_writer)
     writer.write(test)
     writer = tf.data.experimental.TFRecordWriter(train_writer)
     writer.write(train)
+
 
 def build_detectfn(path):
 
@@ -67,6 +72,7 @@ def build_detectfn(path):
     print('Done! Took {} seconds'.format(elapsed_time))
     return miningpagedetect
 
+
 def create_tf_example_new(group, path, prefix):
     with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
         encoded_jpg = fid.read()
@@ -74,7 +80,7 @@ def create_tf_example_new(group, path, prefix):
     image = Image.open(encoded_jpg_io)
     width, height = image.size
     fileid = os.path.basename(group.filename)
-    fileid= fileid.encode('utf8')
+    fileid = fileid.encode('utf8')
     filename = group.filename.encode('utf8')
     image_format = b'png'
     xmins = []
@@ -83,16 +89,17 @@ def create_tf_example_new(group, path, prefix):
     ymaxs = []
     classes_text = []
     classes = []
-     
+
     for index, row in group.object.iterrows():
-        box = row[ prefix + 'detection_boxes']
+        box = row[prefix + 'detection_boxes']
         ymin, xmin, ymax, xmax = box
         xmins.append(xmin)
         xmaxs.append(xmax)
         ymins.append(ymin)
         ymaxs.append(ymax)
-        classes_text.append(row[prefix +'detection_classesname'].encode('utf8'))
-        classes.append(int(row[prefix +'detection_classes']))
+        classes_text.append(
+            row[prefix + 'detection_classesname'].encode('utf8'))
+        classes.append(int(row[prefix + 'detection_classes']))
     tf_example = tf.train.Example(features=tf.train.Features(feature={
         'image/height': dataset_util.int64_feature(height),
         'image/width': dataset_util.int64_feature(width),
@@ -114,12 +121,12 @@ def create_tf_example_new(group, path, prefix):
 def create_tf_example(group, path):
     imgpath = group['page_path']
     image_string = tf.io.read_file(imgpath)
-    #with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
+    # with tf.io.gfile.GFile(os.path.join(path, '{}'.format(group.filename)), 'rb') as fid:
     image_shape = tf.image.decode_png(image_string).shape
     #idth, height = image.size
 
     #filename = group.filename.encode('utf8')
-    #print(group.filename)
+    # print(group.filename)
     #fileid = group['page_imgname'].encode('utf8')
     #image_format = b'png'
     xmins = []
@@ -164,7 +171,7 @@ def create_tf_figid(group, path):
     image = Image.open(encoded_jpg_io)
     width, height = image.size
     fileid = os.path.basename(group.filename)
-    fileid= fileid.encode('utf8')
+    fileid = fileid.encode('utf8')
     filename = group.filename.encode('utf8')
     image_format = b'png'
     xmins = []
@@ -213,7 +220,8 @@ def run_inference_for_page_series(series, tensor_dict: dict, session: tf.compat.
     del image
     # all outputs are float32 numpy arrays, so convert types as appropriate
     output_dict['num_detections'] = int(output_dict['num_detections'][0])
-    output_dict['detection_classes'] = output_dict['detection_classes'][0].astype(np.uint8)
+    output_dict['detection_classes'] = output_dict['detection_classes'][0].astype(
+        np.uint8)
     output_dict['detection_boxes'] = output_dict['detection_boxes'][0]
     output_dict['detection_scores'] = output_dict['detection_scores'][0]
     if 'detection_masks' in output_dict:
@@ -277,12 +285,18 @@ def run_inference(tensor_dict: dict, image: np.ndarray, session: tf.compat.v1.Se
     image_tensor = tf.get_default_graph().get_tensor_by_name('image_tensor:0')
 
     # Run inference
-    output_dict = session.run(tensor_dict, feed_dict={image_tensor: np.expand_dims(image, 0)})
+    output_dict = session.run(tensor_dict, feed_dict={
+                              image_tensor: np.expand_dims(image, 0)})
 
     return output_dict
 
 
-def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath: str, img_size: Tuple[int, int] = (512, 512)) -> None:
+def run_vesselprofile_segmentation(vesselpath: str,
+                                   segmentpath: str,
+                                   modelpath: str,
+                                   img_size: Tuple[int, int] = (512, 512),
+                                   mark_black_img: bool = False,
+                                   resize_img: bool = True) -> None:
     """
     @brief performs segmentation of vesselprofile images
     @param vesselpath directory of vesselprofile images
@@ -300,7 +314,6 @@ def run_vesselprofile_segmentation(vesselpath: str, segmentpath: str, modelpath:
 
     # predict segmentations and store to segmentpath
     prog_bar = tqdm(total=len(vessel_image_list)-1)
-    #keras.utils.Progbar(len(vessel_image_list)-1, width=30, verbose=1, interval=0.5, unit_name='step')
 
     for img_name in vessel_image_list:
         image = cv2.imread(os.path.join(
