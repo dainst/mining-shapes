@@ -6,7 +6,6 @@ import cv2 as cv
 from tensorflow import keras
 from typing import Tuple, List, NamedTuple
 import glob
-import os
 from pathlib import Path
 from tqdm import tqdm
 
