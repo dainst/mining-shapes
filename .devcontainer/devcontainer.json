@@ -21,8 +21,10 @@
   },
   // Add the IDs of extensions you want installed when the container is created.
   "extensions": [
+    "ms-python.python",
     "ms-python.vscode-pylance",
     "eamodio.gitlens",
-    "bierner.markdown-preview-github-styles"
+    "bierner.markdown-preview-github-styles",
+    "ms-azuretools.vscode-docker"
   ]
 }
