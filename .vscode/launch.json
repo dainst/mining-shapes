@@ -5,13 +5,25 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: split_data",
             "type": "python",
             "request": "launch",
             "program": "/home/Code/Shape_Segmentation/split_cvat_data.py",
-            "args": ["--images","/home/images/source_imgs/",
-                     "--mask","/home/images/20_Binary_Ceramic_Shapes",
-                     "--output","/home/images/OUTPUT/CeramicDataset"],
+            "args": [
+                "--images",
+                "/home/images/source_imgs/",
+                "--mask",
+                "/home/images/20_Binary_Ceramic_Shapes",
+                "--output",
+                "/home/images/OUTPUT/CeramicDataset"
+            ],
             "console": "integratedTerminal"
         },
         {
