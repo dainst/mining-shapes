@@ -10,7 +10,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 
-class FetureEntry(NamedTuple):
+class FeatureEntry(NamedTuple):
     id: str
     feature_vec: List[int]
 
@@ -37,13 +37,13 @@ class ResnetFeatureVectors:
     def __len__(self):
         return len(glob.glob(f"{self._images_path}/*.jpg"))
 
-    def __iter__(self) -> FetureEntry:
+    def __iter__(self) -> FeatureEntry:
         for img_path in glob.glob(f"{self._images_path}/*.jpg"):
             img = cv.resize(self._read_img_rgb(img_path), self._image_size)
             resource_id = self._resourceId_from_file(img_path)
             feature_vec = self._model.predict(
                 img[np.newaxis, ...], verbose=False)
-            yield FetureEntry(resource_id, list(feature_vec.flatten()))
+            yield FeatureEntry(resource_id, list(feature_vec.flatten()))
 
 
 def post_featurevector_to_db(path: str, input_shape: Tuple[int, int, int] = (512, 512, 3)) -> None:
