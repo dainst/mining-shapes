@@ -8,6 +8,7 @@ from typing import Tuple, List, NamedTuple
 import glob
 from pathlib import Path
 from tqdm import tqdm
+import requests
 
 
 class FeatureEntry(NamedTuple):
@@ -46,21 +47,40 @@ class ResnetFeatureVectors:
             yield FeatureEntry(resource_id, list(feature_vec.flatten()))
 
 
-def post_featurevector_to_db(path: str, input_shape: Tuple[int, int, int] = (512, 512, 3)) -> None:
+def featurevector_to_db(
+        path: str,
+        db_url: str,
+        db_name: str,
+        auth: Tuple[str, str],
+        input_shape: Tuple[int, int, int] = (512, 512, 3)) -> None:
     """
-    @brief: Read images in path, compute resnet feature vectors and return as json
+    @brief: Read images in path, compute resnet feature vectors and PUT data into RUNNING PouchDB instance
+            of idai-field
     @param path: Location of binary images.
-    @input_shape shape to scale images
+    @param db_url: url of running pouchDB instance
+    @db_name: name of database
+    @param auth: authentication for PouchDB (username, password)
+    @param input_shape shape to scale images
     """
+    pouchDB_url = f'{db_url}/{db_name}'
 
     model = keras.applications.resnet50.ResNet50(
         input_shape=input_shape, include_top=False, pooling='avg', weights='imagenet')
-    f = open("hello.txt", "w")
 
     vector_generator = ResnetFeatureVectors(path, model, input_shape[:2])
     with tqdm(total=len(vector_generator)) as pbar:
-        for i in vector_generator:
-            f.write(f"{i.id}, {i.feature_vec[:13]}")
+        for feature in vector_generator:
+            put_data_in_pouchdb(pouchDB_url,
+                                auth=auth, feature=feature)
             pbar.update(1)
 
-    f.close()
+
+def put_data_in_pouchdb(url: str, auth: Tuple[str, str], feature: FeatureEntry) -> None:
+    doc_url = f"{url}/{feature.id}"
+    res = requests.get(doc_url, auth=auth)
+    if res.status_code != 404:
+        payload = res.json()
+        rev = payload['_rev']
+        payload['resource']['featureVectors'] = {
+            'resnet': str(feature.feature_vec)}
+        stat = requests.put(f"{doc_url}?rev={rev}", auth=auth, json=payload)
