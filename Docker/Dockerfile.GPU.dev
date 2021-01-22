@@ -1,5 +1,4 @@
 FROM tensorflow/tensorflow:2.2.0-gpu
-RUN apt-get install -y dos2unix
 
 #install dos2unix (needed to run shell scripts on Windows OS)
 RUN apt-get install -y dos2unix
