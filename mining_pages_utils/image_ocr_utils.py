@@ -8,18 +8,30 @@ import re
 
 
 
-def double_to_singlepage(dataframe, splitpercent):
-    print(dataframe['page_path'])
-    doublepage_imgnp = cv2.imread(dataframe['page_path'])
-    height, width, channel = doublepage_imgnp.shape
-    splitline = int(width*splitpercent)
+def double_to_singlepage(dataframe):
+    for index,row in dataframe.iterrows():
+        if row['expectDoublepages']:
+            doublepage_imgnp = cv2.imread(row['page_path'])
+            os.remove(row['page_path'])
+            height, width, channel = doublepage_imgnp.shape
+            splitline = int(width*row['splitpercent'])
 
-    pageleft_imgnp = doublepage_imgnp[0:height, 0:splitline]
-    pageright_imgnp = doublepage_imgnp[0:height, splitline:width]
-    cv2.imwrite(dataframe['page_path'].replace('.png','-left.png'), pageleft_imgnp)
-    cv2.imwrite(dataframe['page_path'].replace('.png','-right.png'), pageright_imgnp)
+            pageleft_imgnp = doublepage_imgnp[0:height, 0:splitline]
+            pageright_imgnp = doublepage_imgnp[0:height, splitline:width]
+            pdfpageid_left = 2*row['page_pdfid'] - 1
+            pdfpageid_right = 2*row['page_pdfid']
+            #result = re.sub(r"(\d.*?)\s(\d.*?)", r"\1 \2", string1)
+            #print(result)
+            #reg = re.compile('.*[0-9]*-[0-9]*\.png')
+            pagepath_left = re.sub(r'-[0-9]*\.png', '-' + str(2*row['page_pdfid'] - 1) + '.png', row['page_path'])
+            pagepath_right = re.sub(r'-[0-9]*\.png', '-' + str(2*row['page_pdfid'])  + '.png', row['page_path'])
+            print(pagepath_left)
+            print(pagepath_right)
+            cv2.imwrite(pagepath_left, pageleft_imgnp)
+            cv2.imwrite(pagepath_right, pageright_imgnp)
 
-    
+
+
 
     #dataframe['figid_clean'] = dataframe['figid_raw']
 

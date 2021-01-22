@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/usr/local/bin/python",
+    "python.pythonPath": "C:\\Users\\mhaibt\\.conda\\envs\\masking\\python.exe",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "python.linting.pylintArgs": [

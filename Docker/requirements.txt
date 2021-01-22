@@ -21,3 +21,4 @@ inflect
 zipfile38
 Shapely
 Rtree-linux
+fpdf

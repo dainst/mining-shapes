@@ -15,10 +15,10 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'    # Suppress TensorFlow logging (1)
 import inflect
 import uuid
-
-from mining_pages_utils.image_ocr_utils import load_page, cut_image, ocr_pre_processing, ocr_post_processing_pageid, cut_image_savetemp, cut_image_figid, ocr_post_processing_figid
+from shapely.geometry import Polygon
+from mining_pages_utils.image_ocr_utils import double_to_singlepage, load_page, cut_image, ocr_pre_processing, ocr_post_processing_pageid, cut_image_savetemp, cut_image_figid, ocr_post_processing_figid
 from mining_pages_utils.dataframe_utils import get_page_labelmap_as_df, get_figid_labelmap_as_df, extract_page_detections, extract_page_detections_new,unfold_pagedetections, page_detections_toframe, extract_detections_figureidv2,humanreadID
-from mining_pages_utils.dataframe_utils import filter_best_page_detections, select_pdfpages, choose_pageid, filter_best_vesselprofile_detections, merge_info,  provide_pagelist, provide_pdf_path, get_pubs_and_configs, pdf_to_image, handleduplicate_humanreadID
+from mining_pages_utils.dataframe_utils import extract_pdfid, filter_best_page_detections, select_pdfpages, choose_pageid, filter_best_vesselprofile_detections, merge_info,  provide_pagelist, provide_pdf_path, get_pubs_and_configs, pdf_to_image, handleduplicate_humanreadID
 from mining_pages_utils.json_utils import create_find_JSONL, create_constructivisttype_JSONL, create_normativtype_JSONL, create_drawing_JSONL, create_catalog_JSONL, create_trench_JSONL
 from mining_pages_utils.tensorflow_utils import create_tf_example_new, create_tf_figid, run_inference_for_page_series, run_inference_for_figure_series, build_detectfn, Df2TFrecord, split
 
@@ -37,7 +37,7 @@ for gpu in gpus:
 INPUTDIRECTORY = '/home/images/apply' 
 GRAPH = '/frozen_inference_graph.pb'
 LABELS = '/label_map.pbtxt'
-PAGE_MODEL = '/home/models/faster_rcnn_resnet101_v1_1024x1024_coco17_miningpagesv9'
+PAGE_MODEL = '/home/models/faster_rcnn_resnet101_v1_1024x1024_coco17_OCKquick_miningpagesv9_posttrain'
 SAVEDMODEL = '/saved_model'
 FIGID_MODEL = '/home/models/faster_rcnn_resnet101_v1_1024x1024_coco17_miningfiguresv3'
 SEG_MODEL = '/home/models/shape_segmentation/train_colab_20200610.h5'
@@ -59,6 +59,10 @@ publist = get_pubs_and_configs(INPUTDIRECTORY)
 pdflist = provide_pdf_path(publist)
 pdflistv2 = pdflist.apply(pdf_to_image, axis=1)
 pagelist = provide_pagelist(pdflistv2)
+pagelist = pagelist.apply(extract_pdfid, axis=1)
+pagelist = double_to_singlepage(pagelist)
+pagelist = provide_pagelist(pdflist)
+pagelist = pagelist.apply(extract_pdfid, axis=1)
 pagelist = select_pdfpages(pagelist)
 
 
@@ -128,6 +132,11 @@ all_detections_step3 = merge_info(all_detections_step2, pageid_raw)
 all_detections_step3 = all_detections_step3.apply(ocr_post_processing_pageid, axis=1)
 
 figures = filter_best_vesselprofile_detections(all_detections_step3, lowest_score= 0.7)
+
+
+# %%
+for index, row in figures.iterrows():
+    print(row['detection_boxes'])
 
 
 # %%

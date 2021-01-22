@@ -106,13 +106,12 @@ def provide_pagelist(dataframe: pd.DataFrame) ->pd.DataFrame:
             filelist = os.listdir(row['pubfolder_path'])
             reg = re.compile(os.path.basename(row['pubpdf_path'])+'[0-9]*-[0-9]*\.png')
             pnglist =  list(filter(reg.match, filelist))
-            reg_pdfpageid = re.compile(os.path.basename(row['pubpdf_path'])+'[0-9]*-([0-9]*)\.png')
             for page_imgname in pnglist:
                 page = row
                 page_path = os.path.join(row['pubfolder_path'], page_imgname)
                 page['page_imgname'] = page_imgname
                 page['page_path'] = page_path
-                page['page_pdfid'] =  int(re.search(reg_pdfpageid, page_imgname).group(1))
+
                 pagelist.append(page.copy())
 
         else:
@@ -124,6 +123,13 @@ def provide_pagelist(dataframe: pd.DataFrame) ->pd.DataFrame:
                     page['page_path'] = page_path
                     pagelist.append(page.copy())
     return pd.DataFrame(pagelist)
+
+def extract_pdfid(series):
+    reg_pdfpageid = re.compile(os.path.basename(series['pubpdf_path'])+'[0-9]*-([0-9]*)\.png')
+    series['page_pdfid'] =  int(re.search(reg_pdfpageid, series['page_imgname']).group(1))
+    return series
+
+
 
 
 def select_pdfpages(dataframe: pd.DataFrame) ->pd.DataFrame:
