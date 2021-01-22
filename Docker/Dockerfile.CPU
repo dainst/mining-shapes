@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.3.0
+FROM tensorflow/tensorflow:2.2.0
 
 #install dos2unix (needed to run shell scripts on Windows OS)
 RUN apt-get install -y dos2unix
