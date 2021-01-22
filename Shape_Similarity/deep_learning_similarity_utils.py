@@ -44,7 +44,7 @@ class ResnetFeatureVectors:
             resource_id = self._resourceId_from_file(img_path)
             feature_vec = self._model.predict(
                 img[np.newaxis, ...], verbose=False)
-            yield FeatureEntry(resource_id, list(feature_vec.flatten()))
+            yield FeatureEntry(resource_id, feature_vec.flatten().tolist())
 
 
 def featurevector_to_db(
@@ -82,5 +82,5 @@ def put_data_in_pouchdb(url: str, auth: Tuple[str, str], feature: FeatureEntry) 
         payload = res.json()
         rev = payload['_rev']
         payload['resource']['featureVectors'] = {
-            'resnet': str(feature.feature_vec)}
+            'resnet': feature.feature_vec}
         stat = requests.put(f"{doc_url}?rev={rev}", auth=auth, json=payload)
