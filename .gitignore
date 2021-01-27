@@ -11,3 +11,4 @@ vscode_remote/**
 *.pickle
 *.bin
 model.json
+**/lib/*.js
