@@ -1,5 +1,5 @@
 {
-  "name": "headless_resnet50",
+  "name": "idai-shapes-ceramics_resnet50",
   "version": "1.0.0",
   "description": "Keras resnet50 architecture with weights trained on imagenet with parameter include_top=false and pooling='avg and input_shape=(512,512,3)",
   "main": "lib/index.js",
@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/dainst/mining-shapes.git"
   },
-  "author": "DAI",
+  "author": "kihmono123",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/dainst/mining-shapes/issues"
