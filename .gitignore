@@ -3,8 +3,11 @@
 **/.ipynb_checkpoints/**
 vscode_remote/**
 **/save_dir/**
+**/node_modules/**
 
 #files to ignore
 *.DS_Store
 *.h5
 *.pickle
+*.bin
+model.json

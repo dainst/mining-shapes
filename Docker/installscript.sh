@@ -9,6 +9,8 @@ apt-get install -y graphviz
 apt-get install -y tesseract-ocr
 apt-get install -y curl unzip
 apt-get update && apt-get install -y poppler-utils
+apt-get install -y nodejs && apt-get install -y npm
+npm install npm -g && npm update npm -g
 
 # Install object detection api dependencies
 DEBIAN_FRONTEND=noninteractive apt-get install -y protobuf-compiler python3-pil python3-lxml python3-tk

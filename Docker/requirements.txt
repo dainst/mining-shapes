@@ -22,3 +22,4 @@ zipfile38
 Shapely
 Rtree
 fpdf
+tensorflowjs
