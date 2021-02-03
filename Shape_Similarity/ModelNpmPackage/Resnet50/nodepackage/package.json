@@ -1,6 +1,6 @@
 {
   "name": "idai-shapes-ceramics_resnet50",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Keras resnet50 architecture with weights trained on imagenet with parameter include_top=false and pooling='avg and input_shape=(512,512,3)",
   "main": "lib/index.js",
   "scripts": {
@@ -18,8 +18,7 @@
   "homepage": "https://github.com/dainst/mining-shapes#readme",
   "dependencies": {
     "@babel/runtime": "^7.12.5",
-    "@tensorflow/tfjs": "^3.0.0",
-    "@tensorflow/tfjs-node": "^3.0.0"
+    "@tensorflow/tfjs": "^3.0.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.12.10",
