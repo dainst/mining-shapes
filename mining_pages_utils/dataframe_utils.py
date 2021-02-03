@@ -106,13 +106,12 @@ def provide_pagelist(dataframe: pd.DataFrame) ->pd.DataFrame:
             filelist = os.listdir(row['pubfolder_path'])
             reg = re.compile(os.path.basename(row['pubpdf_path'])+'[0-9]*-[0-9]*\.png')
             pnglist =  list(filter(reg.match, filelist))
-            reg_pdfpageid = re.compile(os.path.basename(row['pubpdf_path'])+'[0-9]*-([0-9]*)\.png')
             for page_imgname in pnglist:
                 page = row
                 page_path = os.path.join(row['pubfolder_path'], page_imgname)
                 page['page_imgname'] = page_imgname
                 page['page_path'] = page_path
-                page['page_pdfid'] =  int(re.search(reg_pdfpageid, page_imgname).group(1))
+
                 pagelist.append(page.copy())
 
         else:
@@ -124,6 +123,25 @@ def provide_pagelist(dataframe: pd.DataFrame) ->pd.DataFrame:
                     page['page_path'] = page_path
                     pagelist.append(page.copy())
     return pd.DataFrame(pagelist)
+
+def extract_pdfid(series):
+    reg_pdfpageid = re.compile(os.path.basename(series['pubpdf_path'])+'[0-9]*-([0-9]*)\.png')
+    series['page_pdfid'] =  int(re.search(reg_pdfpageid, series['page_imgname']).group(1))
+    return series
+
+
+
+
+def select_pdfpages(dataframe: pd.DataFrame) ->pd.DataFrame:
+    
+    pagelist = pd.DataFrame()
+    for index, row in dataframe.iterrows():
+        print(type(row['page_pdfid']))
+        for p in row['select_pdfpages']:
+            print(p)
+            if row['page_pdfid'] in range(p[0],p[1]):
+                pagelist = pagelist.append(row)
+    return pagelist
 
 
 def unfold_pagedetections(df: pd.DataFrame) ->pd.DataFrame:
@@ -186,6 +204,7 @@ def extract_page_detections_new(df: pd.DataFrame, category_index: pd.DataFrame) 
     for index, row in df.iterrows():
         page_detections = row['page_detections']
         boxes = page_detections['detection_boxes']
+
         #print(boxes)
 
 
@@ -195,30 +214,39 @@ def extract_detections_figureidv2(df: pd.DataFrame):
     df['figid_detection_boxes'] = figid_detectionsdict['figid_detection_boxes'][0]
     df['figid_detection_classes'] = figid_detectionsdict['figid_detection_classes'][0]
     df['figid_num_detections'] = figid_detectionsdict['figid_num_detections']
-    return df
+    return df.drop(columns='figid_detections')
 
 
-def filter_best_page_detections(all_detections: pd.DataFrame, classlist: list, lowest_score: float):
+
+def filter_best_page_detections(all_detections, lowest_score):
     """
     @brief thresholds and selects only detections above certain detection score
     @classlist list of all classes 
     @param lowest_score score threshold
     """
-    pageids = (all_detections[(all_detections['detection_classesname'].isin(classlist)) &
-                              (all_detections['detection_scores'] >= lowest_score)])
+    pageids = pd.DataFrame()
+    for index, row in all_detections.iterrows():
+        if row['detection_classesname'] in row['classlist'] and row['detection_scores'] >= lowest_score:
+            pageids = pageids.append(row)
+
+    return pageids
+
+def choose_pageid(pageids):
     bestdetections = (pageids[pageids['detection_scores'] == pageids
                               .groupby(['pub_key', 'pub_value', 'page_imgname', 'detection_classesname'])['detection_scores'].transform('max')])
     return bestdetections
 
 
-def filter_best_vesselprofile_detections(all_detections: pd.DataFrame, classlist: list, lowest_score: float):
+def filter_best_vesselprofile_detections(all_detections: pd.DataFrame, lowest_score: float):
     """
     @brief thresholds and selects only vesselprofile detections above certain detection score
     @classlist list of all classes 
     @param lowest_score score threshold
     """
-    bestdetections = (all_detections[(all_detections['detection_classesname'].isin(classlist)) &
-                                     (all_detections['detection_scores'] >= lowest_score)])
+    bestdetections = pd.DataFrame()
+    for index, row in all_detections.iterrows():
+        if row['detection_classesname'] in row['figureclasslist'] and row['detection_scores'] >= lowest_score:
+            bestdetections = bestdetections.append(row)
     return bestdetections
 
 
@@ -251,7 +279,4 @@ def merge_info(all_detections: pd.DataFrame, bestpages_result: pd.DataFrame):
     return all_detections
 
 
-def split(df, group):
-    data = namedtuple('data', ['filename', 'object'])
-    gb = df.groupby(group)
-    return [data(filename, gb.get_group(x)) for filename, x in zip(gb.groups.keys(), gb.groups)]
+

@@ -4,10 +4,10 @@ import os
 #import Keras
 import zipfile
 import shutil
-import random
-from sklearn.model_selection import train_test_split
+#import random
+#from sklearn.model_selection import train_test_split
 
-DIR = "E:/Traindata/"
+DIR = "/home/images/apply/testtfrec/"
 
 TRAIN_PART = 0.7
 
@@ -17,7 +17,7 @@ def unzip_tfrecords(path):
     listoftfrecordfiles = []
     for file in os.listdir(path):
         if file.endswith('.zip'):
-            
+
             with zipfile.ZipFile(DIR + file, 'r') as zip_ref:
                 zipinfos = zip_ref.infolist()
                 tfrecordfiles = {}
@@ -39,7 +39,7 @@ def unzip_tfrecords(path):
                         target = open(tfrecordfiles['pbtxtpath'], "wb")
                         with source, target:
                             shutil.copyfileobj(source, target)
-                listoftfrecordfiles.append(tfrecordfiles)   
+                listoftfrecordfiles.append(tfrecordfiles)
                 #zip_ref.extractall(DIR)
                 i = i + 1
     return listoftfrecordfiles
@@ -64,7 +64,7 @@ def traintestsplit(dataset):
     split = 3
     dataset_train = dataset.window(split, split + 1).flat_map(lambda ds: ds)
     dataset_test = dataset.skip(split).window(1, split + 1).flat_map(lambda ds: ds)
-    return dataset_train , dataset_test 
+    return dataset_train , dataset_test
 
 def writetrainandtest(train,test, i):
     test_writer = os.path.join(DIR, 'x0' +str(i) + "_test.tfrecord")
@@ -82,9 +82,3 @@ for tfrecords in listoftfrecordfiles:
     record=loadtfrecord(tfrecords['tfrpath'])
     train, test = traintestsplit(record)
     writetrainandtest(train,test, tfrecords['id'])
-
-
-
-
-               
-

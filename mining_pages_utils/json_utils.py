@@ -22,6 +22,7 @@ def create_find_JSONL(df: pd.DataFrame, file: TextIO):
     file.write("\n")
 
 
+
 def create_constructivisttype_JSONL(df: pd.DataFrame, file: TextIO):
     TYPE_template = '{"category":"","identifier":"","relations":{"isChildOf":""}}'
     TYPE = json.loads(TYPE_template)
