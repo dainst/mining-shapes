@@ -1,9 +1,11 @@
 
 import tensorflow as tf
 import os
+#import Keras
 import zipfile
 import shutil
 import random
+from sklearn.model_selection import train_test_split
 
 DIR = "E:/Traindata/"
 
@@ -31,6 +33,7 @@ def unzip_tfrecords(path):
                         with source, target:
                             shutil.copyfileobj(source, target)
                     if str(zipinfo.filename).endswith('.pbtxt'):
+                        tfrecordfiles['id'] = i
                         tfrecordfiles['pbtxtpath'] = DIR + str(i) + zipinfo.filename
                         source = zip_ref.open(zipinfo.filename)
                         target = open(tfrecordfiles['pbtxtpath'], "wb")
@@ -40,7 +43,16 @@ def unzip_tfrecords(path):
                 #zip_ref.extractall(DIR)
                 i = i + 1
     return listoftfrecordfiles
+def dataset_shapes(dataset):
+    try:
+        return [x.get_shape().as_list() for x in dataset._tensors]
+    except TypeError:
+        return dataset._tensors.get_shape().as_list()
 
+def loadtfrecord(path):
+
+    dataset = tf.data.TFRecordDataset(path, compression_type=None, buffer_size=None, num_parallel_reads=None)
+    return dataset
 
 def converttolist(path):
     records = []
@@ -48,39 +60,31 @@ def converttolist(path):
         records.append(record)
     return records
 
-def traintestsplit(tfrecord):
-    n_total = len(tfrecord)
-    split_idx = int(n_total * TRAIN_PART)
-
-    random.shuffle(tfrecord)
-
-    train = tfrecord[:split_idx]
-    test = tfrecord[split_idx:]
-
-    print("Length of records:", len(tfrecord))
-    print("Length train/test: %d/%d" % (len(train), len(test)))
-    return train,test 
+def traintestsplit(dataset):
+    split = 3
+    dataset_train = dataset.window(split, split + 1).flat_map(lambda ds: ds)
+    dataset_test = dataset.skip(split).window(1, split + 1).flat_map(lambda ds: ds)
+    return dataset_train , dataset_test 
 
 def writetrainandtest(train,test, i):
-    test_writer = tf.io.TFRecordWriter(os.path.join(DIR, str(i) + "_test.tfrecord"))
-    train_writer = tf.io.TFRecordWriter(os.path.join(DIR, str(i) + "_train.tfrecord"))
-    for record in train:
-        train_writer.write(record)
+    test_writer = os.path.join(DIR, 'x0' +str(i) + "_test.tfrecord")
+    train_writer = os.path.join(DIR, 'x0' + str(i) + "_train.tfrecord")
 
-    for record in test:
-        test_writer.write(record)
-    test_writer.flush()
-    train_writer.flush()
+    writer = tf.data.experimental.TFRecordWriter(test_writer)
+    writer.write(test)
+    writer = tf.data.experimental.TFRecordWriter(train_writer)
+    writer.write(train)
+
 
 listoftfrecordfiles = unzip_tfrecords(DIR)
-trains = []
-tests = []
+
 for tfrecords in listoftfrecordfiles:
-    record=converttolist(tfrecords['tfrpath'])
-    train,test=traintestsplit(record)
-    trains.extend(train)
-    tests.extend(test)
-writetrainandtest(trains,tests, 'settest')
+    record=loadtfrecord(tfrecords['tfrpath'])
+    train, test = traintestsplit(record)
+    writetrainandtest(train,test, tfrecords['id'])
+
+
+
 
                
 
