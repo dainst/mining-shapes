@@ -1,0 +1,31 @@
+{
+  "name": "idai-shapes-ceramics-segmentation-unet",
+  "version": "1.0.0",
+  "description": "Unet segmentation netowork. Pretrained on imagenet. Returns 2 channel binary image",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "node_modules/@babel/cli/bin/babel.js src --out-dir lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dainst/mining-shapes.git"
+  },
+  "author": "kihmono123",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dainst/mining-shapes/issues"
+  },
+  "homepage": "https://github.com/dainst/mining-shapes#readme",
+  "dependencies": {
+    "@babel/runtime": "^7.12.5",
+    "@tensorflow/tfjs": "^3.0.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.12.10",
+    "@babel/core": "^7.12.10",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-transform-runtime": "^7.12.10",
+    "@babel/preset-env": "^7.12.11"
+  }
+}
