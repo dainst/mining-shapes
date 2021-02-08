@@ -20,6 +20,6 @@ def augment_to_outlined_profile(_image: np.ndarray, _mask: np.ndarray):
 
     color = np.random.randint(10, 50)
     cv.drawContours(out, cnts, -1, color=color,
-                    thickness=np.random.randint(1, 2))
+                    thickness=np.random.randint(1, 3))
 
     return out
