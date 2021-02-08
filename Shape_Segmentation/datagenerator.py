@@ -11,7 +11,7 @@ import sys
 
 # pylint: disable=import-error
 sys.path.append(os.path.abspath('/home/Code'))
-from dataset_utils.dashed_augmentation.main import augment_to_dashed_profile  # noqa: E402
+from dataset_utils.dashed_augmentation.main import DashedAugmentation  # noqa: E402
 from dataset_utils.outlined_augmentation.main import augment_to_outlined_profile  # noqa: E402
 
 AugOptions = namedtuple('AugOptions', ['img_trans', 'artificial'])
@@ -53,6 +53,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self._scale = scale
         self._augment_data = self.get_aug_mode(augment_data)
         self._labelmap_path = labelmap_path
+        self._dashed_augmentation = DashedAugmentation()
 
         self._images, self._masks = self._create_dataset()
         self._read_labelmap()
@@ -241,8 +242,8 @@ class DataGenerator(tf.keras.utils.Sequence):
         """
         def gray2rgb(img): return cv.cvtColor(img, cv.COLOR_GRAY2RGB)
         rand = np.random.randint(0, 8)
-        if rand == 3:
-            return gray2rgb(augment_to_dashed_profile(image, mask))
+        if rand == 3 or rand == 2:
+            return gray2rgb(self._dashed_augmentation.augment_to_dashed_profile(image, mask))
         elif rand == 4:
             return gray2rgb(augment_to_outlined_profile(image, mask))
         else:
