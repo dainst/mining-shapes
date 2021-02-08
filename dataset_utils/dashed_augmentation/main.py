@@ -2,12 +2,15 @@ import numpy as np
 import cv2 as cv
 from glob import glob
 from dataset_utils.image_utils import convert_image_gray_if_bgr
+import os
 
 
 class DashedAugmentation:
     def __init__(self) -> None:
+        path = os.path.join(os.path.dirname(
+            os.path.realpath(__file__)), "patterns/*")
         self.patterns = [cv.imread(img, cv.IMREAD_GRAYSCALE) for img in glob(
-            "/home/Code/dataset_utils/dashed_augmentation/patterns/*")]
+            path)]
 
     def generate_random_dashed_array(self, height, width):
         """
