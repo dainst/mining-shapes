@@ -315,7 +315,7 @@ def run_vesselprofile_segmentation(vesselpath: str,
     # predict segmentations and store to segmentpath
     prog_bar = tqdm(total=len(vessel_image_list)-1)
 
-    for img_name in vessel_image_list:
+    for img_name in [i for i in vessel_image_list if i.endswith('.jpg') or i.endswith('.png')]:
         image = cv2.imread(os.path.join(
             vesselpath, img_name), cv2.IMREAD_COLOR)
         height_orig, width_orig, *_ = image.shape
