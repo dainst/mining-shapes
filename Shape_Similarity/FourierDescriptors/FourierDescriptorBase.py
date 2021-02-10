@@ -55,6 +55,10 @@ class FourierDescriptorBase(metaclass=ABCMeta):
     def normalizeDescriptor(self, descriptor: np.ndarray) -> np.ndarray:
         pass
 
+    @abstractmethod
+    def getDescriptorDimensions(self) -> int:
+        pass
+
     def getLargestContour(self, contours: List) -> np.ndarray:
         """ Returns the largest contour of a list of contours. 
             Makes sure that contours created of noisy image artifacts are not returned

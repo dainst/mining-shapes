@@ -99,3 +99,10 @@ class FourierDescriptorPhase(FourierDescriptorBase):
 
         return G
 
+    def getDescriptorDimensions(self) -> int:
+        """
+        @brief For n harmonics => FD[-m_n, ...., 0, ...., m_n ]
+                We have to FDs (G_a, G_b)
+                We separate in real part and imaginary part 
+        """
+        return (2*self.descriptor_harmonics+1)*2**2
