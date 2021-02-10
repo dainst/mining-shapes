@@ -2,41 +2,54 @@ import numpy as np
 import cv2 as cv
 from typing import List
 from abc import ABCMeta, abstractmethod
+from pathlib import Path
+import glob
+# pylint: disable=relative-beyond-top-level
+from ..db_utils.featureentry import FeatureEntry
+
+
+class ProvideListOfStr(Exception):
+    pass
 
 
 class FourierDescriptorBase(metaclass=ABCMeta):
     """
     Base class to construct Fourier descriptor of given binary images \n
-    @param list of filenames or list of images
+    @param list of filenames
     @param normalize set if Fourier descriptors should be normalized
-    @param number of fourier descriptor (FD) harmonics -> FD[-m_n, -m_n-1, ...-m_1, m_0, m_1, ...., m_n-1, m_n ] for n harmonics
+    @param descriptor_harmonics number of fourier descriptor (FD) harmonics -> FD[-m_n, -m_n-1, ...-m_1, m_0, m_1, ...., m_n-1, m_n ] for n harmonics
     """
 
-    def __init__(self, images: List, descriptor_harmonics: int, normalize:bool = True):
+    def __init__(self, image_path: str, descriptor_harmonics: int, normalize: bool = True):
         self.descriptors = []
         self.contours = []
         self.descriptor_harmonics = descriptor_harmonics
         self._normalize = normalize
-        if isinstance(images[0], str):
-            self.images = [cv.imread(image, cv.IMREAD_GRAYSCALE)
-                           for image in images]
+        if isinstance(image_path, str):
+            self.images = glob.glob(f"{image_path}/*.jpg")
         else:
-            self.images = images
+            raise ProvideListOfStr
 
-    def run(self) -> np.ndarray:
-        for image in self.images:
+    def __iter__(self) -> FeatureEntry:
+        for img_name in self.images:
+            image = cv.imread(img_name, cv.IMREAD_GRAYSCALE)
+            resource_id = self._resourceId_from_file(img_name)
+
+            if self.is_image_black(image):
+                yield FeatureEntry(resource_id, [0]*self.getDescriptorDimensions())
+                continue
+
             self.contours.append(
                 self.detectOutlineContour(image.astype('uint8')))
             unnormalized_descriptor = self.makeFourierDescriptorFromPolygon(
                 self.contours[-1][:, 0], self.contours[-1][:, 1], self.descriptor_harmonics)
             if self._normalize:
-                self.descriptors.append(
-                    self.normalizeDescriptor(unnormalized_descriptor))
+                yield FeatureEntry(resource_id, self.normalizeDescriptor(unnormalized_descriptor).tolist())
             else:
-                self.descriptors.append(unnormalized_descriptor)
+                yield FeatureEntry(resource_id, unnormalized_descriptor.tolist())
 
-        self.descriptors = np.array(self.descriptors)
-        return self.descriptors
+    def __len__(self) -> int:
+        return len(self.images)
 
     def detectOutlineContour(self, bin_image: np.ndarray) -> np.ndarray:
         """ Detects outline contour of given binary image """
@@ -118,3 +131,9 @@ class FourierDescriptorBase(metaclass=ABCMeta):
                 np.complex(a_m - d_m, c_m + b_m)
 
         return FD
+
+    def is_image_black(self, image: np.ndarray) -> bool:
+        return True if cv.countNonZero(image) == 0 else False
+
+    def _resourceId_from_file(self, filename: str) -> str:
+        return Path(filename).stem

@@ -1,14 +1,10 @@
 import numpy as np
 import cv2 as cv
 import glob
-from typing import List, NamedTuple
 from pathlib import Path
 from tensorflow import keras
-
-
-class FeatureEntry(NamedTuple):
-    id: str
-    feature_vec: List[int]
+# pylint: disable=relative-beyond-top-level
+from ..db_utils.featureentry import FeatureEntry
 
 
 class ResnetFeatureVectors:

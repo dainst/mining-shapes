@@ -1,5 +1,5 @@
 import numpy as np
-from FourierDescriptorBase import FourierDescriptorBase
+from .FourierDescriptorBase import FourierDescriptorBase
 
 
 class FourierDescriptorPhase(FourierDescriptorBase):
@@ -17,10 +17,11 @@ class FourierDescriptorPhase(FourierDescriptorBase):
 
         # rotation
 
-        G_ac = np.concatenate( (G_a.real, G_a.imag))
-        G_bc = np.concatenate( (G_b.real, G_b.imag)) 
+        G_ac = np.concatenate((G_a.real, G_a.imag))
+        G_bc = np.concatenate((G_b.real, G_b.imag))
+        complex_vector = np.concatenate((G_ac, G_bc))
 
-        return np.concatenate((G_ac, G_bc))
+        return complex_vector.real + complex_vector.imag
 
     def _setTranslationInvariant(self, descriptor: np.ndarray):
         """
