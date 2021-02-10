@@ -1,51 +1,14 @@
 """
 Helper function for Deep Learning based shape similarity computation
 """
-import numpy as np
-import cv2 as cv
 from tensorflow import keras
-from typing import Tuple, List, NamedTuple
-import glob
-from pathlib import Path
+from typing import Tuple, List
 from tqdm import tqdm
 import requests
+from .resnetfeaturevectors import ResnetFeatureVectors, FeatureEntry
 
 
-class FeatureEntry(NamedTuple):
-    id: str
-    feature_vec: List[int]
-
-
-class ResnetFeatureVectors:
-    """
-    @brief: Data generator to return feature vector of given keras model
-    @param images_path: location of source images
-    @param model: path to keras Model
-    """
-
-    def __init__(self, images_path: str, model: keras.Model) -> None:
-        self._images_path = images_path
-        self._model = model
-
-    def _resourceId_from_file(self, filename: str) -> str:
-        return Path(filename).stem
-
-    def _read_img_rgb(self, path: str) -> np.ndarray:
-        return cv.cvtColor(cv.imread(path, cv.IMREAD_COLOR), cv.COLOR_BGR2RGB)
-
-    def __len__(self):
-        return len(glob.glob(f"{self._images_path}/*.jpg"))
-
-    def __iter__(self) -> FeatureEntry:
-        for img_path in glob.glob(f"{self._images_path}/*.jpg"):
-            img = self._read_img_rgb(img_path)
-            resource_id = self._resourceId_from_file(img_path)
-            feature_vec = self._model.predict(
-                img[np.newaxis, ...], verbose=False)
-            yield FeatureEntry(resource_id, feature_vec.flatten().tolist())
-
-
-def featurevector_to_db(
+def resnet_featurevector_to_db(
         path: str,
         db_url: str,
         db_name: str,
