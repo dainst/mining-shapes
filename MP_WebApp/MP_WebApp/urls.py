@@ -19,5 +19,5 @@ from django.urls.conf import include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('miningshapes/', include("mining_shapes.urls"))
+    path('', include('mining_shapes.urls'))
 ]
