@@ -127,3 +127,6 @@ STATIC_URL = '/static/'
 
 # Models and Features
 MODELS_DIR = '/home/Data/Models/'
+FEATURES = (
+    ("1", "ResNet"),
+    ("2", "PhaseFourier"))

@@ -18,3 +18,4 @@ class RunSessionForm(forms.Form):
     images = forms.ImageField(
         widget=forms.ClearableFileInput(attrs={'multiple': True}))
     model = forms.ChoiceField(choices=available_models())
+    features = forms.MultipleChoiceField(choices=settings.FEATURES)

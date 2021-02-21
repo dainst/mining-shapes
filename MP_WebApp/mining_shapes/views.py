@@ -2,7 +2,7 @@ from django.shortcuts import render
 from .forms import RunSessionForm
 from .models import Session
 from .model_utils import put_images_in_vesselmodel
-from .form_utils import get_name_of_choice_field
+from .form_utils import get_name_of_choice_field, get_features_from_feature_field
 
 
 def index(request):
@@ -13,7 +13,9 @@ def index(request):
             session.save()
             put_images_in_vesselmodel(session, request.FILES.getlist('images'))
             choice = get_name_of_choice_field(form['model'])
-
+            features = get_features_from_feature_field(
+                form.cleaned_data.get("features"))
+            print("HE")
             # handle_uploaded_file(request.FILES['file'])
 
     return render(request, "mining_shapes/index.html", {
