@@ -124,3 +124,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# Models and Features
+MODELS_DIR = '/home/Data/Models/'
