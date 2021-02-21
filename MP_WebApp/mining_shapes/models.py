@@ -9,6 +9,9 @@ class Session(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self) -> str:
+        return f"{self.pk}_{self.user}"
+
 
 class VesselProfile(models.Model):
     filename = models.CharField(max_length=255)
