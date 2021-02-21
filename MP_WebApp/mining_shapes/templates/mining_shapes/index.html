@@ -2,10 +2,15 @@
 
 {% block body %}
 <div class="container vertical-center w-75 mt-2">
-    <div class="input-group mb-3">
-        <input type="file" class="form-control" id="inputGroupFile02">
-        <label class="input-group-text" for="inputGroupFile02">Upload</label>
-    </div>
+    {% if user.is_authenticated  %}
+        <form action="{% url 'index' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{form}}
+            <button type="submit" class="btn btn-primary m-1">Post</button>
+        </form>
+    {% else %}
+        <p>Please create User Account to upload images</p>
+    {% endif %}
 <div>
 
 {% endblock %}

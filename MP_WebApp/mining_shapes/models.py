@@ -20,7 +20,7 @@ class VesselProfile(models.Model):
         upload_to="seg_images", blank=True, null=True),
     catalog = models.CharField(max_length=255)
     session = models.ForeignKey(Session, on_delete=models.CASCADE)
-    # vector field
+    # ADD vector fields
 
     def __str__(self) -> str:
         return f"{self.filename}_{self.catalog}"
