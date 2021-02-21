@@ -13,7 +13,8 @@ class Session(models.Model):
 class VesselProfile(models.Model):
     filename = models.CharField(max_length=255)
     input_image = ImageField(upload_to="orig_image")
-    segmented_image = models.ImageField(upload_to="seg_images")
+    segmented_image = models.ImageField(
+        upload_to="seg_images", blank=True, null=True),
     catalog = models.CharField(max_length=255)
     session = models.ForeignKey(Session, on_delete=models.CASCADE)
     # vector field
