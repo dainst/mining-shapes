@@ -3,8 +3,12 @@ from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponseRedirect
 from django.db import IntegrityError
 from django.urls import reverse
+from django.contrib.auth.decorators import login_required
 
 from .models import User
+from mining_shapes.models import Session
+
+# pylint: disable=no-member
 
 
 def login_view(request):
@@ -57,3 +61,13 @@ def register(request):
         return HttpResponseRedirect(reverse("index"))
     else:
         return render(request, "user/register.html")
+
+
+@login_required
+def user_info(request, uid):
+    user = User.objects.get(pk=uid)
+    sessions = Session.objects.filter(user=user)
+    return render(request, "user/user.html", {
+        "userinfo": user,
+        "sessions": sessions
+    })

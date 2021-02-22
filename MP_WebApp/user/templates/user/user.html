@@ -1,0 +1,15 @@
+{% extends "mining_shapes/layout.html" %}
+
+{% block body %}
+<div class="card w-50 h-50 m-2 vertical-center">
+    <div class="card-body">
+        <h5 class="card-title">{{userinfo.username}}</h5>
+        <h6 class="card-subtitle mb-2">Sessions</h6>
+        <ul class="list-group list-group-flush">
+            {% for session in sessions %}
+                <li class="list-group-item">{{session.pk}} - {{session.date}}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock body %}
