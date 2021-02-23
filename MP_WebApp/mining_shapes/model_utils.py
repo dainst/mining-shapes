@@ -4,7 +4,7 @@ import cv2 as cv
 import numpy as np
 from django.core.files.base import ContentFile
 
-from .models import Session, VesselProfile, FetureType, SegmentationImage
+from .models import Session, VesselProfile, FetureType
 
 # pylint: disable=no-member
 
@@ -30,7 +30,6 @@ def put_features_in_session(session: Session, features: List[str]) -> None:
 def add_seg_image_to_vesselmodel(image: np.ndarray, vesselprofile: VesselProfile) -> None:
     frame_jpg = cv.imencode('.jpg', image)
     file_i = ContentFile(frame_jpg[1])
-    seg_img = SegmentationImage()
-    seg_img.image.save(vesselprofile.filename, file_i, save=True)
-    vesselprofile.segmented_image = seg_img
+    vesselprofile.segmented_image.save(
+        vesselprofile.filename, file_i, save=True)
     vesselprofile.save()

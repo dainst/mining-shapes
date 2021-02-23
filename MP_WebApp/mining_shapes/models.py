@@ -21,17 +21,13 @@ class Session(models.Model):
         return f"{self.pk}_{self.user}"
 
 
-class SegmentationImage(models.Model):
-    image = models.ImageField(upload_to="seg_images")
-
-
 class VesselProfile(models.Model):
     filename = models.CharField(max_length=255)
     input_image = models.ImageField(upload_to="orig_image")
     catalog = models.CharField(max_length=255)
     session = models.ForeignKey(Session, on_delete=models.CASCADE)
-    segmented_image = models.ForeignKey(
-        SegmentationImage, blank=True, null=True, on_delete=models.CASCADE)
+    segmented_image = models.FileField(
+        blank=True, null=True, upload_to="seg_images")
     # ADD vector fields
 
     def __str__(self) -> str:
