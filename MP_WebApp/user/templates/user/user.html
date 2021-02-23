@@ -7,7 +7,11 @@
         <h6 class="card-subtitle mb-2">Sessions</h6>
         <ul class="list-group list-group-flush">
             {% for session in sessions %}
-                <li class="list-group-item">{{session.pk}}. {{session.model}} - {{session.date}}</li>
+                <li class="list-group-item">
+                    <a href="{% url 'processresult' session_id=session.pk%}">
+                        {{session.pk}}. {{session.model}} - {{session.date}}
+                    </a>
+                </li>
             {% endfor %}
         </ul>
     </div>
