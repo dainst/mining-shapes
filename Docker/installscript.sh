@@ -14,3 +14,10 @@ npm install npm -g && npm update npm -g
 
 # Install object detection api dependencies
 DEBIAN_FRONTEND=noninteractive apt-get install -y protobuf-compiler python3-pil python3-lxml python3-tk
+
+
+# Install redis for MP_WebApp progress bar 
+apt-get install wget -y
+wget http://download.redis.io/releases/redis-5.0.8.tar.gz
+tar xzf redis-5.0.8.tar.gz && cd redis-5.0.8
+make

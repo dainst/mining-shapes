@@ -1,3 +1,4 @@
+from .tasks import run_process
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
@@ -35,6 +36,9 @@ def index(request):
 def process(request, session_id: int):
     session = Session.objects.get(pk=session_id)
     features = [i.name for i in session.features.all()]
+
+    result = run_process.delay(10)
     return render(request, "mining_shapes/process.html", {
         "session": session,
-        "features": features})
+        "features": features,
+        'task_id': result.task_id})

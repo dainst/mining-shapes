@@ -9,6 +9,9 @@ RUN chmod +x /tmp/installscript.sh
 RUN dos2unix /tmp/installscript.sh
 RUN /tmp/installscript.sh
 RUN rm /tmp/installscript.sh
+COPY 6379.conf /etc/redis/6379.conf
+RUN mkdir /home/redis-logs
+RUN chmod -R 777 /home/redis-logs
 
 #install python packages
 COPY requirements.txt /tmp/requirements.txt

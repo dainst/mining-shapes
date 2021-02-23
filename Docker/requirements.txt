@@ -24,3 +24,6 @@ Rtree
 fpdf
 tensorflowjs
 Django
+celery
+redis
+celery-progress

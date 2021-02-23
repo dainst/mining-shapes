@@ -39,7 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'mining_shapes',
-    'user'
+    'user',
+    # Celery apps
+    'celery',
+    'celery_progress'
 ]
 
 MIDDLEWARE = [
@@ -130,3 +133,7 @@ MODELS_DIR = '/home/Data/Models/'
 FEATURES = (
     ("1", "ResNet"),
     ("2", "PhaseFourier"))
+
+# Celery Settings
+BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
