@@ -29,16 +29,11 @@
 		}
 
 	function processResult(resultElement, result) {
-		if (result.includes("successful")) {
-			$( resultElement ).append(
-				$('<br>')
-			);
-			$( resultElement ).append(
-				$('<p class="text-center">').text(result)
-			);
-		}
-	}
-
+        var result_url = "{% url 'processresult' session.pk %}";
+        $( resultElement ).append(
+            $('<a>').text('Show results').attr("href", result_url)
+        );
+    }
 	// Progress Bar (JQuery)
 	$(function () {
 		var progressUrl = "{% url 'celery_progress:task_status' task_id %}";

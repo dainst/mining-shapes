@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect
 
 
 from .forms import RunSessionForm
-from .models import Session
+from .models import Session, VesselProfile
 from .model_utils import put_images_in_vesselmodel, put_features_in_session
 from .form_utils import get_name_of_choice_field, get_features_from_feature_field
 
@@ -39,3 +39,13 @@ def process(request, session_id: int):
     return render(request, "mining_shapes/process.html", {
         "session": session,
         'task_id': pid.task_id})
+
+
+@login_required
+def processresult(request, session_id: int):
+    session = Session.objects.get(pk=session_id)
+    profiles = VesselProfile.objects.filter(session=session)
+    return render(request, "mining_shapes/processresult.html", {
+        "profiles": profiles,
+        "session": session_id
+    })
