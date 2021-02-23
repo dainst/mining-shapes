@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'user',
     # Celery apps
     'celery',
-    'celery_progress'
+    'celery_progress',
 ]
 
 MIDDLEWARE = [

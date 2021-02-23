@@ -35,10 +35,7 @@ def index(request):
 @login_required
 def process(request, session_id: int):
     session = Session.objects.get(pk=session_id)
-    features = [i.name for i in session.features.all()]
-
-    result = run_process.delay(10)
+    pid = run_process.delay(session_id)
     return render(request, "mining_shapes/process.html", {
         "session": session,
-        "features": features,
-        'task_id': result.task_id})
+        'task_id': pid.task_id})

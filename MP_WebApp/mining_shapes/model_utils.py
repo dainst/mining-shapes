@@ -1,7 +1,10 @@
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from typing import List
+import cv2 as cv
+import numpy as np
+from django.core.files.base import ContentFile
 
-from .models import Session, VesselProfile, FetureType
+from .models import Session, VesselProfile, FetureType, SegmentationImage
 
 # pylint: disable=no-member
 
@@ -22,3 +25,12 @@ def put_features_in_session(session: Session, features: List[str]) -> None:
         feature_type, _ = FetureType.objects.get_or_create(name=feature)
         feature_type.save()
         session.features.add(feature_type)
+
+
+def add_seg_image_to_vesselmodel(image: np.ndarray, vesselprofile: VesselProfile) -> None:
+    frame_jpg = cv.imencode('.jpg', image)
+    file_i = ContentFile(frame_jpg[1])
+    seg_img = SegmentationImage()
+    seg_img.image.save(vesselprofile.filename, file_i, save=True)
+    vesselprofile.segmented_image = seg_img
+    vesselprofile.save()
