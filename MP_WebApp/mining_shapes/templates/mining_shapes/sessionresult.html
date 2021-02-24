@@ -1,15 +1,17 @@
 {% extends "mining_shapes/layout.html" %}
 {% block body %}
 <h1>Results from session {{session}}</h1>
+<div class="row"/>
 {% for profile in profiles %}
     <div class="card m-2" style="width: 18rem;">
         <img class="card-img-top" src={{profile.input_image.url}} alt="Card image cap">
         <img class="card-img-top" src={{profile.segmented_image.url}} alt="Card image cap">
         <div class="card-body">
-            <h5 class="card-title">{{profile.filename}}</h5>
-            <p class="card-text">{{profile.catalog}}</p>
+            <h5 class="card-title">Filename: {{profile.filename}}</h5>
+            <p class="card-text">Catalog: {{profile.catalog}}</p>
             <a href="#" class="btn btn-primary">Edit</a>
         </div>
     </div>
 {% endfor %}
+</div>
 {% endblock body %}
