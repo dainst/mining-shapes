@@ -6,5 +6,6 @@ urlpatterns = [
     path('process/<int:session_id>',
          views.process, name='process'),
     path('sessionresult/<int:session_id>',
-         views.sessionresult, name='sessionresult')
+         views.sessionresult, name='sessionresult'),
+    path('editshape/<int:shape_id>', views.editshape, name='editshape'),
 ]

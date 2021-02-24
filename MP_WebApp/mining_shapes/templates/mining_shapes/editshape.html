@@ -1,0 +1,14 @@
+{% extends "mining_shapes/layout.html" %}
+{% load static %}
+
+{% block body %}
+<h2>Edit {{profile.filename}}</h2>
+<div id="url" hidden>{{profile.input_image.url}}</div>
+<div id="height" hidden>{{profile.input_image.height}}</div>
+<div id="width"  hidden>{{profile.input_image.width}}</div>
+<canvas id="canvas"/>
+{% endblock %}
+
+{% block script %}
+<script src=" {% static 'mining_shapes/editshape.js' %}"></script>
+{% endblock script %}

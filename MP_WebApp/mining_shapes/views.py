@@ -52,3 +52,11 @@ def sessionresult(request, session_id: int):
         "profiles": profiles,
         "session": session_id
     })
+
+
+@login_required
+def editshape(request, shape_id: int):
+    profile = VesselProfile.objects.get(pk=shape_id)
+    return render(request, "mining_shapes/editshape.html", {
+        "profile": profile
+    })
