@@ -14,7 +14,6 @@ def put_images_in_vesselmodel(session: Session, img_files: List[InMemoryUploaded
         profile = VesselProfile(
             filename=image.name,
             input_image=image,
-            catalog="test",
             session=session,
         )
         profile.save()
