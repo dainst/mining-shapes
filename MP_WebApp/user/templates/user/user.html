@@ -9,7 +9,7 @@
             {% for session in sessions %}
                 <li class="list-group-item">
                     <a href="{% url 'sessionresult' session_id=session.pk%}">
-                        {{session.pk}}. {{session.model}} - {{session.date}}
+                        {{session.pk}}. &nbsp; {{session.catalog}} &nbsp;-&nbsp; {{session.model}}
                     </a>
                 </li>
             {% endfor %}

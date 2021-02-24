@@ -21,3 +21,5 @@ class RunSessionForm(forms.Form):
     ), widget=forms.widgets.Select(attrs=styling))
     features = forms.MultipleChoiceField(
         choices=settings.FEATURES, widget=forms.widgets.SelectMultiple(attrs=styling))
+    catalog = forms.CharField(
+        widget=forms.widgets.Textarea(attrs=dict({'rows': 1}, **styling)))

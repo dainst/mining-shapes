@@ -19,7 +19,8 @@ def index(request):
         if form.is_valid():
             model_choice = get_name_of_choice_field(form['model'])
 
-            session = Session(user=request.user, model=model_choice)
+            session = Session(user=request.user,
+                              model=model_choice, catalog=form.cleaned_data['catalog'])
             session.save()
             features = get_features_from_feature_field(
                 form.cleaned_data.get("features"))
