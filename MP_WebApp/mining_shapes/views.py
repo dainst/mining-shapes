@@ -42,10 +42,10 @@ def process(request, session_id: int):
 
 
 @login_required
-def processresult(request, session_id: int):
+def sessionresult(request, session_id: int):
     session = Session.objects.get(pk=session_id)
     profiles = VesselProfile.objects.filter(session=session)
-    return render(request, "mining_shapes/processresult.html", {
+    return render(request, "mining_shapes/sessionresult.html", {
         "profiles": profiles,
         "session": session_id
     })
