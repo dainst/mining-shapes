@@ -1,18 +1,23 @@
 {% extends "mining_shapes/layout.html" %}
 
 {% block body %}
-<h1>{{session.pk}}</h1>
-<h1>{{session.model}}</h1>
-{% for i in features %}
-    <p>{{i}}</p>
-{% endfor %}
 <div class="container" style="padding-top: 20px;">
-	<div class="card" style="height: 120px;">
-		<div class='progress-wrapper' style="padding-top: 10px;">
-            <div id='progress-bar' class='progress-bar progress-bar-striped' role='progressbar' style="height:30px; width: 0%; border-radius: 5px">&nbsp;</div>
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title">Running session&nbsp;{{session.pk}}</h3>
+            <h5 class="card-subtitle mb-2 text-muted">Model: {{session.model}}</h5>
+            <div class="row m-1">
+                <p class="card-text">Features:&nbsp;</p> 
+                {% for i in features %}
+                    <p class="card-text">{{i}}&nbsp;</p>
+                {% endfor %}
+            </div>
+            <div class='progress-wrapper' style="padding-top: 10px;">
+                <div id='progress-bar' class='progress-bar progress-bar-striped' role='progressbar' style="height:30px; width: 0%; border-radius: 5px">&nbsp;</div>
+            </div>
+            <div id="progress-bar-message"></div>
+            <div id="celery-result"> </div>
         </div>
-        <div id="progress-bar-message"></div>
-        <div id="celery-result"> </div>
 	</div>
 </div>
 {% endblock body %}
@@ -31,7 +36,7 @@
 	function processResult(resultElement, result) {
         var result_url = "{% url 'sessionresult' session.pk %}";
         $( resultElement ).append(
-            $('<a>').text('Show results').attr("href", result_url)
+            $('<a>').text('Show results').attr("href", result_url).attr("class","btn btn-primary mt-2")
         );
     }
 	// Progress Bar (JQuery)
