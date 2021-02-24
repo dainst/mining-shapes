@@ -29,7 +29,7 @@
 		}
 
 	function processResult(resultElement, result) {
-        var result_url = "{% url 'processresult' session.pk %}";
+        var result_url = "{% url 'sessionresult' session.pk %}";
         $( resultElement ).append(
             $('<a>').text('Show results').attr("href", result_url)
         );
