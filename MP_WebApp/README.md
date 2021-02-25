@@ -13,5 +13,5 @@ python manage.py migrate
 cd MP_WebApp 
 /redis-5.0.8/src/redis-server /etc/redis/6379.conf
 celery -A MP_WebApp worker --loglevel=info    
-python manage.py runserver
+python manage.py runserver  #in different terminal window
 ```
