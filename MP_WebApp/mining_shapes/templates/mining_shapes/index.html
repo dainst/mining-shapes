@@ -11,7 +11,10 @@
             <div>
         </form>
     {% else %}
-        <p>Please create User Account to upload images</p>
+        <p>Please 
+            <a href="{% url 'user:register' %}">Register</a>  or 
+            <a href="{% url 'user:login' %}">Login</a>
+            </p>
     {% endif %}
 <div>
 
