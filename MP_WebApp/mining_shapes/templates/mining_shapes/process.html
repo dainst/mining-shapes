@@ -1,0 +1,53 @@
+{% extends "mining_shapes/layout.html" %}
+
+{% block body %}
+<div class="container" style="padding-top: 20px;">
+    <div class="card">
+        <div class="card-body">
+            <h3 class="card-title">Running session&nbsp;{{session.pk}}</h3>
+            <h5 class="card-subtitle mb-2 text-muted">Model: {{session.model}}</h5>
+            <div class="row m-1">
+                <p class="card-text">Features:&nbsp;</p> 
+                {% for i in features %}
+                    <p class="card-text">{{i}}&nbsp;</p>
+                {% endfor %}
+            </div>
+            <div class='progress-wrapper' style="padding-top: 10px;">
+                <div id='progress-bar' class='progress-bar progress-bar-striped' role='progressbar' style="height:30px; width: 0%; border-radius: 5px">&nbsp;</div>
+            </div>
+            <div id="progress-bar-message"></div>
+            <div id="celery-result"> </div>
+        </div>
+	</div>
+</div>
+{% endblock body %}
+
+
+{% block progress_bar_js %}
+{% if task_id %}
+
+<script type="text/javascript">
+	function processProgress(progressBarElement, progressBarMessageElement, progress) {
+			progressBarElement.style.width = progress.percent + "%";
+			var description = progress.description || "Start processing";
+			progressBarMessageElement.innerHTML = description;
+		}
+
+	function processResult(resultElement, result) {
+        var result_url = "{% url 'sessionresult' session.pk %}";
+        $( resultElement ).append(
+            $('<a>').text('Show results').attr("href", result_url).attr("class","btn btn-primary mt-2")
+        );
+    }
+	// Progress Bar (JQuery)
+	$(function () {
+		var progressUrl = "{% url 'celery_progress:task_status' task_id %}";
+		CeleryProgressBar.initProgressBar(progressUrl, {
+			onProgress: processProgress,
+			onResult: processResult,
+		})
+	});
+</script>
+
+{% endif %}
+{% endblock progress_bar_js %}
