@@ -11,7 +11,7 @@
                 <h5 class="card-title">Filename: {{profile.filename}}</h5>
                 <p class="card-text">Catalog: {{profile.catalog}}</p>
                 <a href="{% url 'editshape' shape_id=profile.pk %}" class="btn btn-primary">Edit</a>
-                <a href="#" class="btn btn-danger">Delete</a>
+                <a href="{% url 'removeshape' shape_id=profile.pk %}" class="btn btn-danger">Delete</a>
             </div>
         </div>
     {% endfor %}

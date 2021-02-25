@@ -60,3 +60,11 @@ def editshape(request, shape_id: int):
     return render(request, "mining_shapes/editshape.html", {
         "profile": profile
     })
+
+
+@login_required
+def removeshape(request, shape_id: int):
+    profile = VesselProfile.objects.get(pk=shape_id)
+    session_id = profile.session.pk
+    profile.delete()
+    return HttpResponseRedirect(reverse("sessionresult", kwargs={'session_id': session_id}))
