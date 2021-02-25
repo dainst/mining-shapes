@@ -1,6 +1,6 @@
 {
   "name": "idai-shapes-ceramics-segmentation-unet",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Unet segmentation netowork. Backebone is pretrained on imagenet. The decoder is trained for vesselprofile segmentation. Returns 2 channel binary image",
   "main": "index.js",
   "scripts": {
