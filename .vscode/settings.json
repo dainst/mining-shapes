@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\mhaibt\\.conda\\envs\\masking\\python.exe",
+    "python.pythonPath": "C:\\Users\\mhaibt\\Anaconda3\\envs\\imgpdf2\\python.exe",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "python.linting.pylintArgs": [

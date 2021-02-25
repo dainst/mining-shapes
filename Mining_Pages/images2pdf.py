@@ -1,5 +1,5 @@
 import img2pdf
-
+#from pdf2image import convert_from_path
 import os
 
 
@@ -40,19 +40,29 @@ def findstem(arr):
 
 #pdf = FPDF(unit="pt")
 # imagelist is the list with all image filenames
-inputdir = 'X:/Projekte/iDAI.shapes/Mining_Shapes/INCOMING/Img2pdf'
-for folder in os.listdir(inputdir):
 
-    imagelist = os.listdir(os.path.join(inputdir, folder))
-    print(imagelist)
-    imagelistpath = []
-    imageliststem = []
-    for image in imagelist:
-        if image.endswith(".jpg"):
-            imagelistpath.append(os.path.join(inputdir, folder, image))
-            imageliststem.append(image)
-    stem = findstem(imageliststem)
-    print(stem)
-    stem = stem.replace('.jpg', '')
-    with open(inputdir + "/" + folder + '/' + stem + ".pdf", "wb") as f:
-        f.write(img2pdf.convert(imagelistpath))
+
+
+
+
+
+inputdir = 'U:/Projekte/iDAI.shapes/Mining_Shapes/INCOMING/Img2pdf'
+print(img2pdf --help)
+#img2pdf.convert'U:/Projekte/iDAI.shapes/Mining_Shapes/INCOMING/Img2pdfZenonID_000587058/BaM17_.pdf' tmp
+#convert_from_path(os.path.join(inputdir,'ZenonID_000587058/BaM17_.pdf'), dpi=300, fmt='png', thread_count=4, output_file=os.path.join(inputdir,'ZenonID_000587058/BaM17_.pdf'), output_folder=os.path.join(inputdir,'/ZenonID_000587058/'))
+#for folder in os.listdir(inputdir):
+
+    #imagelist = os.listdir(os.path.join(inputdir, folder))
+    #print(imagelist)
+    #imagelistpath = []
+    #imageliststem = []
+    #for image in imagelist:
+        #if image.endswith(".jpg"):
+            #imagelistpath.append(os.path.join(inputdir, folder, image))
+            #imageliststem.append(image)
+    #stem = findstem(imageliststem)
+    #print(imageliststem)
+    #print(stem)
+    #stem = stem.replace('.jpg', '')
+    #with open(inputdir + "/" + folder + '/' + stem + ".pdf", "wb") as f:
+        #f.write(img2pdf.convert(imagelistpath))
