@@ -16,14 +16,17 @@ def load_seg_model(name: str) -> keras.models.Model:
     return load_segmentation_model(modelpath)
 
 
-def read_image(url: str, size: Tuple[int, int] = (512, 512)) -> np.ndarray:
+def read_image(url: str) -> np.ndarray:
     img = cv.imread(str(settings.BASE_DIR) + url, cv.IMREAD_COLOR)
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-    img = cv.resize(img, size)
     return img
 
 
-def predict_seg_image(model: keras.models.Model, image: np.ndarray):
-    seg_img = model.predict(image[np.newaxis, ...])
+def predict_seg_image(model: keras.models.Model, image: np.ndarray, resize_img_size: Tuple[int, int] = (512, 512)):
+    height_orig, width_orig, *_ = image.shape
+    img = cv.resize(image, resize_img_size)
+    seg_img = model.predict(img[np.newaxis, ...])
     seg_img = (np.argmax(seg_img[0], axis=2) * 255).astype(np.uint8)
-    return seg_img if is_img_black(seg_img) else postprocess_image(seg_img, (512, 512), (512, 512))
+    if not is_img_black(seg_img):
+        seg_img = postprocess_image(seg_img, resize_img_size, image.shape[:2])
+    return cv.resize(seg_img,  (width_orig, height_orig))
