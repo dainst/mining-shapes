@@ -1,0 +1,20 @@
+{% extends "mining_shapes/layout.html" %}
+{% block body %}
+<div class="container m-1" >
+    <h1>Results from session {{session}}</h1>
+    <div class="row"/>
+    {% for profile in profiles %}
+        <div class="card m-2" style="width: 18rem;">
+            <img class="card-img-top" src={{profile.input_image.url}} alt="Card image cap">
+            <img class="card-img-top" src={{profile.segmented_image.url}} alt="Card image cap">
+            <div class="card-body">
+                <h5 class="card-title">Filename: {{profile.filename}}</h5>
+                <p class="card-text">Catalog: {{profile.session.catalog}}</p>
+                <a href="{% url 'editshape' shape_id=profile.pk %}" class="btn btn-primary">Edit</a>
+                <a href="{% url 'removeshape' shape_id=profile.pk %}" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+</div>
+{% endblock body %}
