@@ -1,3 +1,21 @@
 .navbar-background {
   background-image: linear-gradient(to right, rgba(106,164,184,0.95) 0%, #557ebb 100%);
 }
+
+
+#image{
+  position:absolute;
+  z-index: 1;
+  opacity: 0.7;
+}
+
+#canvas_container{
+    display:inline-block;
+    margin: 0 auto; 
+    position:relative; 
+}
+
+#canvas{
+    position:relative;
+    z-index:20;
+}

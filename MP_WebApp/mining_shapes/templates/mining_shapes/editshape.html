@@ -13,7 +13,11 @@
     </div>
     <div class="row">
         <div class="col">
-            <canvas id="canvas"></canvas>
+            <div id="canvas_container">
+                <img id='image' src={{profile.input_image.url}} alt=""
+                    width={{profile.input_image.width}} height={{profile.input_image.height}} />
+                <canvas id="canvas" ></canvas>
+            </div>
         </div>
     </div>
     <div class="row">
