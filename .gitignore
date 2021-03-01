@@ -12,3 +12,4 @@ vscode_remote/**
 *.bin
 model.json
 **/lib/*.js
+.vscode/settings.json

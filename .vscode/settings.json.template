@@ -1,3 +1,4 @@
+// DONT EDIT! Only copy to settings.json and adjust settings to your need!!
 {
     "python.pythonPath": "/usr/local/bin/python",
     "python.linting.pylintEnabled": true,
