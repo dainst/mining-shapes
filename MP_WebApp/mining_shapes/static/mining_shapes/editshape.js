@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', function () {
 const initCanvas = () => {
 
     canvas = document.getElementById('canvas');
-    canvas.addEventListener("click", setPolygonPoint);
-    canvas.addEventListener("oncontextmenu", removePolygonPoint)
+    canvas.addEventListener('click', setPolygonPoint);
+    canvas.addEventListener('oncontextmenu', removePolygonPoint)
     ctx = canvas.getContext('2d');
 
     canvas.width = width;
@@ -77,6 +77,5 @@ const setPolygonPoint = (e) => {
 const removePolygonPoint = (e) => {
 
     e.preventDefault();
-    alert("right click")
     polygon.pop();
 }
