@@ -17,3 +17,6 @@ model.json
 .vscode/settings.json
 Docker/docker-compose.CPU.dev.yml
 Docker/docker-compose.GPU.dev.yml
+
+#removed files
+start_docker.sh
