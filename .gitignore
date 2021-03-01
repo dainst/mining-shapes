@@ -12,4 +12,8 @@ vscode_remote/**
 *.bin
 model.json
 **/lib/*.js
+
+#templates
 .vscode/settings.json
+Docker/docker-compose.CPU.dev.yml
+Docker/docker-compose.GPU.dev.yml
