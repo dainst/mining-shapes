@@ -46,7 +46,11 @@ def edit_seg_image_from_vesselprofile(polygon: List[PointDict], vesselprofile: V
     orig_image = cv.imread(filepath, cv.IMREAD_GRAYSCALE)
     image = np.zeros_like(orig_image, dtype=np.uint8)
     cv.fillPoly(image, pts=np.array([polygon_list]), color=255)
-    cv.imwrite(filepath, image)
+
+    vesselprofile.segmented_image.save(
+        vesselprofile.filename, numpy_img_to_content_file(image), save=True)
+    vesselprofile.save()
+
 
 def numpy_img_to_content_file(image: np.array) -> ContentFile:
     frame_jpg = cv.imencode('.jpg', image)
