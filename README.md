@@ -8,15 +8,10 @@ The shape mining pipeline is designed to extract veselprofiles with correspondin
 
 ## Getting Started
 There are two Docker Containers. One for a GPU machine and one for a CPU machine.
-Install and run docker container. Container hosts a jupyter server. Ther URL for accessing the server
-will be shown in the terminal.
+The container hosts a jupyter server. Ther URL for accessing the server
+will be shown in the terminal. Use docker-compose to run your preferred config (CPU or GPU). Example for CPU
 ```
-chmod +x start_docker.sh
-./start_docker.sh
-```
-or use docker-compose for your preferred config (CPU or GPU). Example for CPU
-```
-docker-compose -f Docker_CPU/docker-compose.yml up
+docker-compose -f Docker/docker-compose.GPU.yml up
 ```
 Access Docker shell. The container has to run for that. 
 ```
@@ -24,7 +19,7 @@ docker ps (to check COTAINER_ID)
 docker exec -it CONTAINER_ID bash
 ```
 
-## Development with Visual Studio Code
+## Development with Visual Studio Code and devcontainers
 1. Install [Visual Studio Code](https://code.visualstudio.com/) with the following extensions:
 - [Remote Development](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack)
 - [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker)
