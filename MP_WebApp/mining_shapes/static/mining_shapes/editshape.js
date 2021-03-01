@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
     image = document.getElementById('image')
     width = image.width;
     height = image.height;
+    window.addEventListener('keydown', enterKeyEvent);
     initCanvas();
 });
 
@@ -115,4 +116,11 @@ const showEditResults = (data) => {
     const actionsCol = document.getElementById('actions_col');
     actionsCol.innerHTML = `<a href=/sessionresult/${data.sessionId} class="btn btn-success mt-1">Return to session</a>`;
 
+}
+
+const enterKeyEvent = (e) => {
+
+    if (e.keyCode === 13) {
+        editProfile();
+    }
 }
