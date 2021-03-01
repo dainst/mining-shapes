@@ -1,4 +1,4 @@
-let canvas, ctx, clearButton, saveButton;
+let canvas, ctx, clearButton, saveButton, image;
 let width, height;
 const pos = { x: 0, y: 0 };
 let polygon = [];
@@ -9,8 +9,9 @@ document.addEventListener('DOMContentLoaded', function () {
     clearButton.addEventListener('click', clear);
     saveButton = document.getElementById('save');
     saveButton.addEventListener('click', editProfile);
-    width = document.getElementById('width').textContent;
-    height = document.getElementById('height').textContent;
+    image = document.getElementById('image')
+    width = image.width;
+    height = image.height;
     initCanvas();
 });
 
@@ -18,7 +19,7 @@ const initCanvas = () => {
 
     canvas = document.getElementById('canvas');
     canvas.addEventListener('click', setPolygonPoint);
-    canvas.addEventListener('oncontextmenu', removePolygonPoint)
+    canvas.addEventListener('oncontextmenu', removePolygonPoint);
     ctx = canvas.getContext('2d');
 
     canvas.width = width;
@@ -90,6 +91,27 @@ const editProfile = () => {
     })
         .then((response) => response.json())
         .then((data) => {
-            console.log(data)
+            showEditResults(data)
         });
+}
+
+const showEditResults = (data) => {
+    clear();
+
+    const message = document.getElementById('message');
+    message.innerHTML = `<h2 class="alert alert-success alert-dismissible fade show">
+                            ${data.message}
+                        </h2>`;
+
+    const imageRow = document.getElementById('image_row');
+    imageRow.innerHTML = `<div class="col">
+                                <img src=${data.segmentedUrl} />
+                            </div>
+                            <div class="col">
+                                <img src=${data.imageUrl} />
+                            </div>`;
+
+    const actionsCol = document.getElementById('actions_col');
+    actionsCol.innerHTML = `<a href=/sessionresult/${data.sessionId} class="btn btn-success mt-1">Return to session</a>`;
+
 }

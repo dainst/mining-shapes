@@ -62,8 +62,13 @@ def editshape(request, shape_id: int):
     profile = VesselProfile.objects.get(pk=shape_id)
     if request.method == "PUT":
         data = json.loads(request.body)
-        edit_seg_image_from_vesselprofile(data['polygon'], shape_id)
-        return JsonResponse({'message': f"Updated shape {shape_id}"})
+        edit_seg_image_from_vesselprofile(data['polygon'], profile)
+        return JsonResponse({
+            'message': f"Updated shape {shape_id}",
+            'imageUrl': profile.input_image.url,
+            'segmentedUrl': profile.segmented_image.url,
+            'sessionId': profile.session.pk,
+        })
 
     return render(request, "mining_shapes/editshape.html", {
         "profile": profile

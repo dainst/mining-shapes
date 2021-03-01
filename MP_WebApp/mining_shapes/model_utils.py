@@ -39,11 +39,10 @@ def add_seg_image_to_vesselmodel(image: np.ndarray, vesselprofile: VesselProfile
     vesselprofile.save()
 
 
-def edit_seg_image_from_vesselprofile(polygon: List[PointDict], shape_id: int) -> None:
+def edit_seg_image_from_vesselprofile(polygon: List[PointDict], vesselprofile: VesselProfile) -> None:
     if not polygon:
         return
     polygon_list = [[point['x'], point['y']] for point in polygon]
-    vesselprofile = VesselProfile.objects.get(pk=shape_id)
 
     filepath = vesselprofile.segmented_image.path
     orig_image = cv.imread(filepath, cv.IMREAD_GRAYSCALE)
