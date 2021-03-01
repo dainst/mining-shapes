@@ -32,10 +32,8 @@ def put_features_in_session(session: Session, features: List[str]) -> None:
 
 
 def add_seg_image_to_vesselmodel(image: np.ndarray, vesselprofile: VesselProfile) -> None:
-    frame_jpg = cv.imencode('.jpg', image)
-    file_i = ContentFile(frame_jpg[1])
     vesselprofile.segmented_image.save(
-        vesselprofile.filename, file_i, save=True)
+        vesselprofile.filename, numpy_img_to_content_file(image), save=True)
     vesselprofile.save()
 
 
@@ -49,3 +47,7 @@ def edit_seg_image_from_vesselprofile(polygon: List[PointDict], vesselprofile: V
     image = np.zeros_like(orig_image, dtype=np.uint8)
     cv.fillPoly(image, pts=np.array([polygon_list]), color=255)
     cv.imwrite(filepath, image)
+
+def numpy_img_to_content_file(image: np.array) -> ContentFile:
+    frame_jpg = cv.imencode('.jpg', image)
+    return ContentFile(frame_jpg[1])
