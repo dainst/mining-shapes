@@ -19,7 +19,7 @@ const initCanvas = () => {
 
     canvas = document.getElementById('canvas');
     canvas.addEventListener('click', setPolygonPoint);
-    canvas.addEventListener('oncontextmenu', removePolygonPoint);
+    canvas.addEventListener('contextmenu', removePolygonPoint);
     ctx = canvas.getContext('2d');
 
     canvas.width = width;
@@ -81,6 +81,7 @@ const removePolygonPoint = (e) => {
 
     e.preventDefault();
     polygon.pop();
+    draw();
 }
 
 const editProfile = () => {
