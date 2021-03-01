@@ -1,13 +1,15 @@
+from django.http.response import JsonResponse
 from .tasks import run_process
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.http import HttpResponseRedirect
-
+import json
 
 from .forms import RunSessionForm
 from .models import Session, VesselProfile
-from .model_utils import put_images_in_vesselmodel, put_features_in_session
+from .model_utils import put_images_in_vesselmodel, put_features_in_session, edit_seg_image_from_vesselprofile
 from .form_utils import get_name_of_choice_field, get_features_from_feature_field
 
 # pylint: disable=no-member
@@ -55,8 +57,14 @@ def sessionresult(request, session_id: int):
 
 
 @login_required
+@csrf_exempt
 def editshape(request, shape_id: int):
     profile = VesselProfile.objects.get(pk=shape_id)
+    if request.method == "PUT":
+        data = json.loads(request.body)
+        edit_seg_image_from_vesselprofile(data['polygon'], shape_id)
+        return JsonResponse({'message': f"Updated shape {shape_id}"})
+
     return render(request, "mining_shapes/editshape.html", {
         "profile": profile
     })

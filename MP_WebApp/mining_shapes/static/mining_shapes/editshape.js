@@ -1,4 +1,4 @@
-let canvas, ctx, clearButton;
+let canvas, ctx, clearButton, saveButton;
 let width, height;
 const pos = { x: 0, y: 0 };
 let polygon = [];
@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     clearButton = document.getElementById('clear');
     clearButton.addEventListener('click', clear);
+    saveButton = document.getElementById('save');
+    saveButton.addEventListener('click', editProfile);
     width = document.getElementById('width').textContent;
     height = document.getElementById('height').textContent;
     initCanvas();
@@ -78,4 +80,16 @@ const removePolygonPoint = (e) => {
 
     e.preventDefault();
     polygon.pop();
+}
+
+const editProfile = () => {
+
+    fetch(`/editshape/${saveButton.dataset.shapeid}`, {
+        method: 'PUT',
+        body: JSON.stringify({ polygon })
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            console.log(data)
+        });
 }
