@@ -41,9 +41,9 @@
     </nav>
     <div class="row"/>
     {% for profile in profiles %}
-        <div class="card m-2" style="width: 18rem;">
-            <img class="card-img-top" src={{profile.input_image.url}} alt="Card image cap">
-            <img class="card-img-top" src={{profile.segmented_image.url}} alt="Card image cap">
+        <div class="card m-2" style="width: 13rem;">
+            <img class="card-img-top" src={{profile.input_image.url}} alt="Card image cap" style="max-height: 200px;" >
+            <img class="card-img-top" src={{profile.segmented_image.url}} alt="Card image cap" style="max-height: 200px;" >
             <div class="card-body">
                 <h5 class="card-title">Filename: {{profile.filename}}</h5>
                 <p class="card-text">Catalog: {{profile.session.catalog}}</p>
