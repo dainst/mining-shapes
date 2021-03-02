@@ -43,7 +43,9 @@ def process(request, session_id: int):
     return render(request, "mining_shapes/process.html", {
         "session": session,
         "features": features,
-        'task_id': pid.task_id})
+        'task_id': pid.task_id,
+        "n_files": len(VesselProfile.objects.filter(session=session)),
+    })
 
 
 @login_required
