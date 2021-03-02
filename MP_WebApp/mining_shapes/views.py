@@ -9,7 +9,7 @@ import json
 
 from .forms import RunSessionForm
 from .models import Session, VesselProfile
-from .model_utils import put_images_in_vesselmodel, put_features_in_session, edit_seg_image_from_vesselprofile
+from .model_utils import put_images_in_vesselmodel, put_features_in_session, edit_seg_image_from_vesselprofile, profile_pagination
 from .form_utils import get_name_of_choice_field, get_features_from_feature_field
 
 # pylint: disable=no-member
@@ -51,7 +51,7 @@ def sessionresult(request, session_id: int):
     session = Session.objects.get(pk=session_id)
     profiles = VesselProfile.objects.filter(session=session)
     return render(request, "mining_shapes/sessionresult.html", {
-        "profiles": profiles,
+        "profiles": profile_pagination(request, profiles),
         "session": session_id
     })
 

@@ -3,6 +3,7 @@ from typing import List, NamedTuple
 import cv2 as cv
 import numpy as np
 from django.core.files.base import ContentFile
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 from .models import Session, VesselProfile, FetureType
 
@@ -55,3 +56,16 @@ def edit_seg_image_from_vesselprofile(polygon: List[PointDict], vesselprofile: V
 def numpy_img_to_content_file(image: np.array) -> ContentFile:
     frame_jpg = cv.imencode('.jpg', image)
     return ContentFile(frame_jpg[1])
+
+
+def profile_pagination(request, post_list) -> Paginator:
+    """ Return pagination of Vesselprofile model """
+    page = request.GET.get('page', 1)
+    paginator = Paginator(post_list, 20)
+    try:
+        profiles = paginator.page(page)
+    except PageNotAnInteger:
+        profiles = paginator.page(1)
+    except EmptyPage:
+        profiles = paginator.page(paginator.num_pages)
+    return profiles
