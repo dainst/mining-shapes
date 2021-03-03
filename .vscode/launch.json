@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Run Django Server",
+            "type": "python",
+            "request": "launch",
+            "program": "/home/Code/MP_WebApp/manage.py",
+            "args": [
+                "runserver"
+            ],
+            "console": "integratedTerminal",
+            "django": true
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

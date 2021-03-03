@@ -308,9 +308,7 @@ def run_vesselprofile_segmentation(vesselpath: str,
     vessel_image_list = os.listdir(vesselpath)
 
     # load pretrained model
-    seg_model = sm.Unet('resnet34', encoder_weights='imagenet', input_shape=(
-        None, None, 3), classes=2, encoder_freeze=True)
-    seg_model.load_weights(modelpath)
+    seg_model = load_segmentation_model(modelpath)
 
     # predict segmentations and store to segmentpath
     prog_bar = tqdm(total=len(vessel_image_list)-1)
@@ -338,6 +336,13 @@ def run_vesselprofile_segmentation(vesselpath: str,
 
         prog_bar.update(1)
     prog_bar.close()
+
+
+def load_segmentation_model(modelpath):
+    model = sm.Unet('resnet34', encoder_weights='imagenet', input_shape=(
+        None, None, 3), classes=2, encoder_freeze=True)
+    model.load_weights(modelpath)
+    return model
 
 
 def is_img_black(img: np.ndarray):

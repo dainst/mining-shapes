@@ -1,0 +1,32 @@
+# DONT EDIT! Only copy to docker-compose.GPU.dev.yml and adjust settings to your need!!
+
+version: '3.5'
+
+services:
+  mining_shapes:
+    container_name: shapes_mining
+    build:
+      context: ./
+      network: host
+      dockerfile: Dockerfile.GPU.dev
+    ports:
+      - '8888:8888' #for jupyter notebook
+      - '6006:6006' #for tensorboard
+      - '8000:8000' #for WebApp
+    volumes:
+      #source code directory
+      - ../:/home/Code
+
+      #mount your data here (see examples below)
+      - ~/mining_shapes/MODELS:/home/models
+      - ~/mining_shapes/APPLY:/home/images/apply
+      - ~/mining_shapes/OUTPUT:/home/images/OUTPUT
+      - ~/mining_shapes/TRAINMODELS:/home/trainmodels
+
+      #vscode extensions
+      - ../vscode_remote/extensions/:/home/shape_miner/.vscode-server/extensions/
+      - ../vscode_remote/insiders/:/home/shape_miner/.vscode-server-insiders/extensions/
+      - ../vscode_remote/bashhistory:/commandhistory
+    user: 1000:1000
+    working_dir: /home/Code
+    tty: true

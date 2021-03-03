@@ -1,0 +1,31 @@
+{% extends "mining_shapes/layout.html" %}
+{% load static %}
+
+{% block body %}
+<div class="container m-2">
+    <div class="row">
+        <div class="col" id="message">
+            <h2>Edit {{profile.filename}}</h2>
+        </div>
+    </div>
+    <div class="row" id="image_row">
+        <div class="col">
+            <div id="canvas_container">
+                <img id="image" src={{profile.input_image.url}} alt=""
+                    width={{profile.input_image.width}} height={{profile.input_image.height}} />
+                <canvas id="canvas" ></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col" id="actions_col">
+            <button id="clear" type="button" class="btn btn-danger">Clear</button>
+            <button id="save"  type="button" class="btn btn-success" data-shapeid={{profile.pk}}>Save</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src=" {% static 'mining_shapes/editshape.js' %}"></script>
+{% endblock script %}

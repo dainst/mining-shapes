@@ -25,6 +25,7 @@
     "ms-python.vscode-pylance",
     "eamodio.gitlens",
     "bierner.markdown-preview-github-styles",
-    "ms-azuretools.vscode-docker"
+    "ms-azuretools.vscode-docker",
+    "batisteo.vscode-django"
   ]
 }

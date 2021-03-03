@@ -10,6 +10,7 @@ services:
     ports:
       - '8888:8888' #for jupyter notebook
       - '6006:6006' #for tensorboard
+      - '8000:8000' #for django
     volumes:
       - ../:/home/Code
 

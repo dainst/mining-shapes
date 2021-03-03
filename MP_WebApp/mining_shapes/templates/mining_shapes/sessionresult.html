@@ -1,0 +1,57 @@
+{% extends "mining_shapes/layout.html" %}
+{% block body %}
+<div class="container m-1" >
+    <h1>Results from session {{session}}</h1>
+    <nav aria-label="Page navigation example">
+        {% if profiles.has_other_pages %}
+        <ul class="pagination">
+            {% if profiles.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ profiles.previous_page_number }}">&laquo;</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <a class="page-link" href=""><span>&laquo;</span></a>
+            </li>
+            {% endif %}
+            {% for i in profiles.paginator.page_range %}
+            {% if profiles.number == i %}
+            <li class="page-item">
+                <a class="page-link" href=""><span>{{ i }} <span class="sr-only">(current)</span></span></a>
+            </li>
+            {% else %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            {% if profiles.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ profiles.next_page_number }}">&raquo;</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <a class="page-link" href="" aria-label="Next">
+                    <span>&raquo;</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        {% endif %}
+    </nav>
+    <div class="row"/>
+    {% for profile in profiles %}
+        <div class="card m-2" style="width: 13rem;">
+            <img class="card-img-top" src={{profile.input_image.url}} alt="Card image cap" style="max-height: 200px;" >
+            <img class="card-img-top" src={{profile.segmented_image.url}} alt="Card image cap" style="max-height: 200px;" >
+            <div class="card-body">
+                <h5 class="card-title">Filename: {{profile.filename}}</h5>
+                <p class="card-text">Catalog: {{profile.session.catalog}}</p>
+                <a href="{% url 'editshape' shape_id=profile.pk %}" class="btn btn-primary">Edit</a>
+                <a href="{% url 'removeshape' shape_id=profile.pk %}" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+</div>
+{% endblock body %}
