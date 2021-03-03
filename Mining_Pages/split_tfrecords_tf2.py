@@ -1,13 +1,24 @@
 
-import tensorflow as tf
+#import tensorflow as tf
 import os
+from pathlib import Path
+import datetime
+import numpy as np
 #import Keras
+#from datumaro.components.project import Project
+from datumaro.components.dataset import Dataset
+import datumaro.plugins.transforms as transforms
+from datumaro.components.operations import merge_categories, MergingStrategy
+from datumaro.components.operations import IntersectMerge
+from datumaro.components.extractor import (Importer, Extractor, Transform, DatasetItem, Bbox, AnnotationType, Label,
+    LabelCategories, PointsCategories, MaskCategories)
 import zipfile
 import shutil
 #import random
 #from sklearn.model_selection import train_test_split
+#print(tf.version.VERSION)
 
-DIR = "/home/images/apply/testtfrec/"
+DIR = Path("E:/Traindata/Trainingdata_fromCVAT/mining_figures/")
 
 TRAIN_PART = 0.7
 
@@ -17,8 +28,10 @@ def unzip_tfrecords(path):
     listoftfrecordfiles = []
     for file in os.listdir(path):
         if file.endswith('.zip'):
-
-            with zipfile.ZipFile(DIR + file, 'r') as zip_ref:
+            unzippedfolder = Path(os.path.join(path,str(file).replace('.zip','')))
+            if not unzippedfolder.exists():
+                os.mkdir(os.path.join(path,str(file).replace('.zip','')))
+            with zipfile.ZipFile(os.path.join(DIR,file), 'r') as zip_ref:
                 zipinfos = zip_ref.infolist()
                 tfrecordfiles = {}
                 for zipinfo in zipinfos:
@@ -27,22 +40,29 @@ def unzip_tfrecords(path):
                     #zipinfo.filename = str(i) + str(zipinfo.filename)
                     print(zipinfo)
                     if str(zipinfo.filename).endswith('.tfrecord'):
-                        tfrecordfiles['tfrpath'] = DIR + str(i) + zipinfo.filename
+                        tfrecordfiles['tfrpath'] = os.path.join(unzippedfolder,zipinfo.filename)
+                        tfrecordfiles['name'] = file
                         source = zip_ref.open(zipinfo.filename)
-                        target = open(tfrecordfiles['tfrpath'], "wb")
-                        with source, target:
-                            shutil.copyfileobj(source, target)
+                        if not Path(tfrecordfiles['tfrpath']).exists():
+                            target = open(tfrecordfiles['tfrpath'], "wb")
+                            with source, target:
+                                shutil.copyfileobj(source, target)
                     if str(zipinfo.filename).endswith('.pbtxt'):
-                        tfrecordfiles['id'] = i
-                        tfrecordfiles['pbtxtpath'] = DIR + str(i) + zipinfo.filename
-                        source = zip_ref.open(zipinfo.filename)
-                        target = open(tfrecordfiles['pbtxtpath'], "wb")
-                        with source, target:
-                            shutil.copyfileobj(source, target)
+                        #tfrecordfiles['id'] = i
+                        tfrecordfiles['pbtxtpath'] = os.path.join(unzippedfolder,zipinfo.filename)
+                        if not Path(tfrecordfiles['pbtxtpath']).exists():
+                            source = zip_ref.open(zipinfo.filename)
+                            target = open(tfrecordfiles['pbtxtpath'], "wb")
+                            with source, target:
+                                shutil.copyfileobj(source, target)
                 listoftfrecordfiles.append(tfrecordfiles)
                 #zip_ref.extractall(DIR)
                 i = i + 1
     return listoftfrecordfiles
+
+
+
+
 def dataset_shapes(dataset):
     try:
         return [x.get_shape().as_list() for x in dataset._tensors]
@@ -74,11 +94,141 @@ def writetrainandtest(train,test, i):
     writer.write(test)
     writer = tf.data.experimental.TFRecordWriter(train_writer)
     writer.write(train)
+def extract_fn(data_record):
+    features = {
+        # Extract features using the keys set during creation
+        "image/class/label":    tf.FixedLenFeature([], tf.int64),
+        "image/encoded":        tf.VarLenFeature(tf.string),
+    }
+    sample = tf.parse_single_example(data_record, features)
+    label = sample['image/class/label']
+    dense = tf.sparse_tensor_to_dense(sample['image/encoded'])
+
+    # Comment it if you got an error and inspect just dense:
+    image = tf.image.decode_image(dense, dtype=tf.float32) 
+
+    return dense, image, label
+def correctionsMiningPages(listoftrainsets,listoftestsets,listofvalsets):
+    merger = IntersectMerge()
+    merged_trainset = merger(listoftrainsets)
+    del listoftrainsets
+    merged_trainset = merged_trainset.transform('remap_labels', {'pageid': 'figureid' }, default='keep')
+    trainset_path = os.path.join(DIR, 'trainset.tfrecord')
+    merged_trainset.export(trainset_path, 'tf_detection_api', save_images=True)
+    merged_testset = merger(listoftestsets)
+    del listoftestsets
+    merged_testset = merged_testset.transform('remap_labels', {'pageid': 'figureid' }, default='keep')
+    testset_path = os.path.join(DIR, 'testset.tfrecord')
+    merged_testset.export(testset_path, 'tf_detection_api', save_images=True)
+    merged_valset = merger(listofvalsets)
+    del listofvalsets
+    merged_valset = merged_valset.transform('remap_labels', {'pageid': 'figureid' }, default='keep')
+    valset_path = os.path.join(DIR, 'valset.tfrecord')
+    merged_valset.export(valset_path, 'tf_detection_api', save_images=True)
+
+def splitEachRecord(listoftfrecordfiles):
+    listoftrainsets = []
+    listoftestsets = []
+    listofvalsets = []
+    for record in listoftfrecordfiles:
+        print(record['name'])
+        dataset= Dataset.import_from(record['tfrpath'], 'tf_detection_api')
+        if 'task_mining_figures_zenonid_000066595_300pages-2021_02_16_12_47_10-tfrecord 1.0' in record['name']:
+            dataset=dataset.select(lambda item: len(item.annotations) != 0)
+
+        splitted = transforms.RandomSplit(dataset, splits=[('train', 0.60), ('test', 0.25), ('val', 0.15)])
+        train = splitted.get_subset('train')
+        trainset = Dataset.from_extractors(train)
+        test = splitted.get_subset('test')
+        testset = Dataset.from_extractors(test)
+        val = splitted.get_subset('val')
+        valset = Dataset.from_extractors(val)
+        #train, test = splitter
+        listoftrainsets.append(trainset)
+        listoftestsets.append(testset)
+        listofvalsets.append(valset)
+
+        return listoftrainsets,listoftestsets,listofvalsets
 
 
 listoftfrecordfiles = unzip_tfrecords(DIR)
 
-for tfrecords in listoftfrecordfiles:
-    record=loadtfrecord(tfrecords['tfrpath'])
-    train, test = traintestsplit(record)
-    writetrainandtest(train,test, tfrecords['id'])
+listoftrainsets,listoftestsets,listofvalsets = splitEachRecord(listoftfrecordfiles)
+correctionsMiningPages(listoftrainsets,listoftestsets,listofvalsets)
+
+# load a Datumaro project
+#project = Project.load('E:/Traindata/Trainingdata_fromCVAT/mining_pages/datumaroproject')
+
+
+
+#dataset = Dataset.from_extractors(dataset1, dataset2)
+#ms = MergingStrategy()
+
+#print(merged.categories())
+#print(dataset2.categories())
+#mergecats = ms.merge([dataset1.categories(), dataset2.categories()])
+#categories = dataset.transform.categories()
+#print(categories.get(AnnotationType.label))
+#newdataset = dataset.transform('remap_labels', {'pageid': 'dog' }, default='delete')
+#print(mergecats)
+#for key, value in categories.items() :
+    #print(type(categories[key]))
+#print(dataset[0])
+#for item in dataset:
+    #print(item)
+
+
+
+  #print(item.annotations)
+#dataset.export(cocofile, 'coco')
+# create a dataset
+#dataset = project.make_dataset()
+
+# keep only annotated images
+#dataset.select(lambda item: len(item.annotations) != 0)
+#print(dataset.categories())
+
+# change dataset labels
+#dataset.transform('remap_labels', {'0': '666'}, default = 'delete')
+
+# iterate over dataset elements
+#i = 0
+#for item in dataset:
+    #if i < 20:
+        #for a in item.annotations:
+            #print(a.label)
+    #i = i +1 
+
+#{<AnnotationType.label: 1>: LabelCategories(attributes=set(), items=[LabelCategories.Category(name='pageid', parent='', attributes=set()), LabelCategories.Category(name='pageinfo', parent='', attributes=set()), LabelCategories.Category(name='vesselprofilefigure', parent='', attributes=set()), LabelCategories.Category(name='vesselimage', parent='', attributes=set()), LabelCategories.Category(name='infoframe', parent='', attributes=set()), LabelCategories.Category(name='stampfigure', parent='', attributes=set())], _indices={'pageid': 0, 'pageinfo': 1, 'vesselprofilefigure': 2, 'vesselimage': 3, 'infoframe': 4, 'stampfigure': 5})}
+    #for i in item.annotations:
+        #print(i)
+  #print(item.id, item.annotations)
+
+# export the resulting dataset in COCO format
+#dataset.export('dst/dir', 'coco')
+#dataset = tf.data.TFRecordDataset(filename, compression_type=None, buffer_size=None, num_parallel_reads=None)
+#for example in tf.compat.v1.python_io.tf_record_iterator(filename):
+    #print(tf.train.Example.FromString(example))
+#for element in dataset:
+    #print(elemen)
+#print(list(dataset.as_numpy_iterator()))
+
+#dataset = dataset.map(extract_fn)
+#iterator = dataset.make_one_shot_iterator()
+#next_element = iterator.get_next()
+
+
+#tf.enable_eager_execution()
+#for images, labels in dataset.take(1):  # only take first element of dataset
+    #numpy_images = images.numpy()
+    #numpy_labels = labels.numpy()
+    #print(numpy_labels)
+    #image = image.reshape(IMAGE_SHAPE)
+
+
+#for tfrecords in listoftfrecordfiles:
+    #dataset=loadtfrecord(tfrecords['tfrpath'])
+    #for element in dataset.as_numpy_iterator():
+
+    #train, test = traintestsplit(record)
+    #writetrainandtest(train,test, tfrecords['id'])
