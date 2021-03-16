@@ -78,17 +78,18 @@ def cut_image_savetemp(dataframe: pd.DataFrame, outpath_base: str) -> pd.DataFra
     return dataframe, figure_imgnp
 
 
-def cut_image_figid(dataframe: pd.DataFrame) -> np.ndarray:
-    figure_imgnp = cv2.imread(dataframe['figure_path'])
-    box = dataframe['figid_detection_boxes']
+def cut_image_figure(row, detection):
+    figure_imgnp = cv2.imread(row['figure_path'])
+    box = detection['detection_boxes']
     ymin, xmin, ymax, xmax = box
-    bbox_xmin = int((xmin)*dataframe['figure_width'])
-    bbox_ymin = int((ymin)*dataframe['figure_height'])
-    bbox_xmax = int((xmax)*dataframe['figure_width'])
-    bbox_ymax = int((ymax)*dataframe['figure_height'])
+    bbox_xmin = int((xmin)*row['figure_width'])
+    bbox_ymin = int((ymin)*row['figure_height'])
+    bbox_xmax = int((xmax)*row['figure_width'])
+    bbox_ymax = int((ymax)*row['figure_height'])
     bbox_np = figure_imgnp[bbox_ymin:bbox_ymax, bbox_xmin:bbox_xmax]
+    detection['imgnp'] = bbox_np
 
-    return bbox_np
+    return detection
 
 
 def load_figure(series: pd.Series) -> pd.Series:
@@ -131,9 +132,7 @@ def load_image_from_pdseries(series, column_name: str, col_base_name: str):
 
     return series
 
-
-
-def ocr_pre_processing(image: np.ndarray) -> np.ndarray:
+def ocr_pre_processing_page(image):
     """
     @brief applies adaptive thresholding to preprocess image for   
             optical character recognition 
@@ -158,6 +157,34 @@ def ocr_pre_processing(image: np.ndarray) -> np.ndarray:
         value=[mean, mean, mean]
     )
     return image
+
+def ocr_pre_processing_figure(detection):
+    """
+    @brief applies adaptive thresholding to preprocess image for   
+            optical character recognition 
+    @param image image to be preprocessed
+    """
+    image = detection['imgnp']
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image = cv2.medianBlur(image, 5)
+    image = cv2.adaptiveThreshold(
+        image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+    row, col = image.shape[:2]
+    bottom = image[row-2:row, 0:col]
+    mean = cv2.mean(bottom)[0]
+
+    bordersize = 20
+    image = cv2.copyMakeBorder(
+        image,
+        top=bordersize,
+        bottom=bordersize,
+        left=bordersize,
+        right=bordersize,
+        borderType=cv2.BORDER_CONSTANT,
+        value=[mean, mean, mean]
+    )
+    detection['imgnp'] = image
+    return detection
 
 
 def ocr_post_processing_pageid(row):

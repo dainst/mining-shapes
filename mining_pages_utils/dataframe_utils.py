@@ -13,14 +13,16 @@ from pdf2image import convert_from_path
 
 def humanreadID(Series):
     humanreadID = ''
-    for element in Series['patternHRID']:
-        if Series[element] is not 'none':
-            humanreadID += Series[element] + '_'
-        if Series[element] is 'none':
-            humanreadID += Series[element] + '_'
-            humanreadID += str(Series['figure_tmpid'])
+    if Series['patternHRID']:
+        print(Series.keys())
+        for element in Series['patternHRID']:
+            if Series[element]:
+                humanreadID += Series[element] + '_'
+            if Series[element] is 'none':
+                humanreadID += Series[element] + '_'
+                humanreadID += str(Series['figure_tmpid'])
 
-    Series['HRID'] = humanreadID.rstrip('_')
+        Series['HRID'] = humanreadID.rstrip('_')
     return Series
 
 
@@ -41,16 +43,28 @@ def pdf_to_image(dataframe):
         reg = re.compile(os.path.basename(dataframe['pubpdf_path'])+'.*png')
         pngexist = filter(reg.match, pnglist)
         if len(list(pngexist)) is 0:
-            convert_from_path(dataframe['pubpdf_path'], dpi=300, fmt='png', thread_count=4, output_file=os.path.basename(
+            convert_from_path(dataframe['pubpdf_path'], fmt='png', thread_count=4, output_file=os.path.basename(
                 dataframe['pubpdf_path']), first_page=None, last_page=None, output_folder=dataframe['pubfolder_path'])
     return dataframe
 
 
 def pdf_to_imagev2(series):
     if(pd.notnull(series['pubpdf_path'])):
+        pnglist = [file for file in os.listdir(series['pubfolder_path']) if file.endswith('.png')]
+        print(pnglist)
         for pagetuple in series['select_pdfpages']:
-            convert_from_path(series['pubpdf_path'], dpi=300, fmt='png', thread_count=4, output_file=os.path.basename(
-                series['pubpdf_path']), first_page=pagetuple[0], last_page=pagetuple[1], paths_only=True, use_pdftocairo=True, output_folder=series['pubfolder_path'])
+            alreadypng = []
+            for i in range(pagetuple[0],pagetuple[1]):
+                i = str(i).zfill(len(str(pagetuple[1])))
+                print(i)
+                reg = re.compile(os.path.basename(series['pubpdf_path'])+'.*' + str(i) + '.png')
+                pngexist = filter(reg.match, pnglist)
+                alreadypng = alreadypng + list(pngexist)
+            if not len(alreadypng) == range(pagetuple[0],pagetuple[1]):
+                convert_from_path(series['pubpdf_path'], fmt='png', thread_count=6, output_file=os.path.basename(
+                    series['pubpdf_path']), first_page=pagetuple[0],dpi=300,last_page=pagetuple[1], paths_only=False, use_pdftocairo=True, output_folder=series['pubfolder_path'])
+            else:
+                print('Pdf-pages' + str(pagetuple[0]) + ' to ' + str(pagetuple[1]) + ' already completed.' )
     return series
 
 
@@ -245,7 +259,7 @@ def filter_best_page_detections(all_detections, lowest_score):
     """
     pageids = pd.DataFrame()
     for index, row in all_detections.iterrows():
-        if row['detection_classesname'] in row['classlist'] and row['detection_scores'] >= lowest_score:
+        if row['detection_classesname'] in row['allowedPageDetections'] and row['detection_scores'] >= lowest_score:
             pageids = pageids.append(row)
 
     return pageids
@@ -265,9 +279,22 @@ def filter_best_vesselprofile_detections(all_detections: pd.DataFrame, lowest_sc
     """
     bestdetections = pd.DataFrame()
     for index, row in all_detections.iterrows():
-        if row['detection_classesname'] in row['figureclasslist'] and row['detection_scores'] >= lowest_score:
+        if row['detection_classesname'] in row['allowedFigureDetections'] + row['allowedFrameDetections']  and row['detection_scores'] >= lowest_score:
             bestdetections = bestdetections.append(row)
     return bestdetections
+
+def grepInfoframe(bestdetections):
+    infoframes = bestdetection[bestdetections['detection_classesname'] is 'infoframe']
+    figures = bestdetection[bestdetections['detection_classesname'] is not 'infoframe']
+    box = dataframe['detection_boxes']
+    ymin, xmin, ymax, xmax = box
+    bbox_xmin = int((xmin)*dataframe['page_width'])
+    bbox_ymin = int((ymin)*dataframe['page_height'])
+    bbox_xmax = int((xmax)*dataframe['page_width'])
+    bbox_ymax = int((ymax)*dataframe['page_height'])
+    shapely.geometry.box(minx, miny, maxx, maxy, ccw=True)
+    row['detection_boxes']
+
 
 
 # def filter_bestdetections_figid(all_detections: pd.DataFrame, classlist: list, lowest_score: float):
