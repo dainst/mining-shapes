@@ -1,0 +1,17 @@
+{
+"catalog_id": "BaM17",
+"expectDoublepages": false,
+"splitpercent": null,
+"pageid_exclude_strings": ["1986","BaM17"],
+"pageid_regex": ".*?([0-9]{1,3}).*?",
+"figid_exclude_strings": [],
+"figid_regex": ".*?([0-9]{1,3}).*?",
+"level_groups_regex": null,
+"patternHRID": ["pub_name","figid_clean"],
+"select_pdfpages": [[197,199],[208,210],[242,244],[254,256],[285,288],[297,365]],
+"classlist": ["pageid", "pageinfo"],
+"figureclasslist": ["vesselprofilefigure"],
+"infoframe_contains": ["infoframeid","textblock"],
+"figureidclasslist": ["figureid"],
+"pageid_config": "--psm 6 -c load_system_dawg=0 load_freq_dawg=0"
+}
