@@ -283,17 +283,7 @@ def filter_best_vesselprofile_detections(all_detections: pd.DataFrame, lowest_sc
             bestdetections = bestdetections.append(row)
     return bestdetections
 
-def grepInfoframe(bestdetections):
-    infoframes = bestdetection[bestdetections['detection_classesname'] is 'infoframe']
-    figures = bestdetection[bestdetections['detection_classesname'] is not 'infoframe']
-    box = dataframe['detection_boxes']
-    ymin, xmin, ymax, xmax = box
-    bbox_xmin = int((xmin)*dataframe['page_width'])
-    bbox_ymin = int((ymin)*dataframe['page_height'])
-    bbox_xmax = int((xmax)*dataframe['page_width'])
-    bbox_ymax = int((ymax)*dataframe['page_height'])
-    shapely.geometry.box(minx, miny, maxx, maxy, ccw=True)
-    row['detection_boxes']
+
 
 
 

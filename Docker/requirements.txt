@@ -28,3 +28,4 @@ celery
 redis
 celery-progress
 datumaro
+geopandas
