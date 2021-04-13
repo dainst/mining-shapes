@@ -29,6 +29,7 @@ def double_to_singlepage(dataframe):
             print(pagepath_right)
             cv2.imwrite(pagepath_left, pageleft_imgnp)
             cv2.imwrite(pagepath_right, pageright_imgnp)
+            
 
 
 

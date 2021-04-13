@@ -316,3 +316,38 @@ def merge_info(all_detections: pd.DataFrame, bestpages_result: pd.DataFrame):
         all_detections['pageinfo_raw'] = ''
 
     return all_detections
+
+def DOCtoDF(DOC):
+    DFdocs = pd.DataFrame(DOC)
+    print(DFdocs.columns)
+    DFdocs = DFdocs.drop('resource', axis=1)
+    DFresources = pd.DataFrame([i['resource'] for i in DOC])
+    for col in DFdocs.columns:
+        DFresources[str(col)]=DFdocs[str(col)]
+    docfields = DFdocs.columns
+
+    return DFresources, docfields
+   
+
+def DFtoDOC(DFresources, docfields):
+    DF = DFresources
+    columns = [i for i in DFresources.columns if not i in docfields]
+    #print(columns)
+    DOC = []
+    for index,row in DF.iterrows():
+        #print(type(row[columns]))
+        #dd = defaultdict(list)
+        #print('Before DROP:')  
+        cleanrow=row[columns].dropna() 
+        #äprint(cleanrow)
+        row['resource']= cleanrow.to_dict()
+        #row['resource'] = {k: row['resource'][k] for k in row['resource'] if not isnan(row['resource'][k])}
+        #print(row)
+        #print('After DROP:')
+        row = row.drop(columns)
+        #print(row)
+
+        DOC.append(row.to_dict())
+    DOChull={}
+    DOChull['docs']=DOC
+    return DOChull
