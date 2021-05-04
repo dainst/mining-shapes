@@ -13,14 +13,7 @@ string_types = (str, unicode) if str is bytes else (str, bytes)
 iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
 
 
-auth = ('', 'blub')
-db_url = 'http://host.docker.internal:3000'
-#db_url = 'http://localhost:3000'
-db_name = 'idaishapes'
-pouchDB_url_find = f'{db_url}/{db_name}/_find'
-pouchDB_url_put = f'{db_url}/{db_name}/'
-pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
-idaifieldconfigpath = Path('/home/idaifieldConfigs')
+
 
 def getZenonBibtex(series):
     exporturl = 'https://zenon.dainst.org/Record/' + series['pub_value'] + '/Export?style='
@@ -30,12 +23,13 @@ def getZenonBibtex(series):
     parse_string
     
     data = parse_string(result.text, 'bibtex')
-    del data.entries['000066595'].fields['crossref']
+    del data.entries[str(series['pub_value'])].fields['crossref']
     #list(data.entry.fields.keys())
     bib_data = data.to_string('bibtex')
     quote = pybtex.format_from_string(bib_data, 'unsrt', min_crossrefs=0, citations=['*'], output_backend='plaintext')
     #bib_data = format_from_string(result.text, 'unsrt')
     print(quote)
+    series['pub_quote'] = quote
     #bibquote = make_bibliography(aux_filename, style=None, output_encoding=None, bib_format=None, **kwargs)
     #print (quote)
     return series
@@ -206,9 +200,7 @@ def DocsStructure(allDocs):
 #print(categories['Type:default'])
 #print(categories['TypeCatalog:default'])
 
-def bulkSaveChanges(DOC, pouchDB_url_bulk, auth ):
-    answer = requests.post(pouchDB_url_bulk , auth=auth, json=DOC)
-    print(answer)
+
 
 def addModifiedEntry(doc):
     now = datetime.now()
