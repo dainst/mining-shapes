@@ -4,8 +4,8 @@ jupyter
 matplotlib
 Pillow
 opencv-python
+ImageHash
 pytesseract
-pandas
 pylint
 tf-slim
 scipy
@@ -19,7 +19,6 @@ nltk
 pyyaml
 inflect
 zipfile38
-Shapely
 Rtree
 fpdf
 tensorflowjs
@@ -28,5 +27,7 @@ celery
 redis
 celery-progress
 datumaro
-geopandas
 pybtex
+geopandas
+pandas
+Shapely

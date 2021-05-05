@@ -152,8 +152,8 @@ def getIdaifieldConfigs(idaifieldconfigpath):
 
     return categories
 
-def selectOfResourceTypes(listOfIncludedTypes, result):
-    selectedResources = [obj for obj in result if obj['resource']['type'] in listOfIncludedTypes ]
+def selectOfResourceTypes(listOfIncludedTypes, allDocs):
+    selectedResources = [obj for obj in allDocs if obj['resource']['type'] in listOfIncludedTypes ]
     return selectedResources
 #categories = getIdaifieldConfigs(idaifieldconfigpath)
 
