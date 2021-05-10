@@ -26,10 +26,11 @@ def humanreadID(Series):
     return Series
 
 
-def handleduplicate_humanreadID(df):
-    p = inflect.engine()
-    g = df.groupby('HRID')
-    df.HRID += g.cumcount().add(1).map(p.ordinal).radd('_DUP').mask(g.HRID.transform('count') == 1, '')
+def handleduplicate(df, field):
+    #p = inflect.engine()
+    g = df.groupby(field)
+    df['HRID_undup'] = df['HRID']
+    df['HRID_undup'] += g.cumcount().add(1).radd('_DUP').mask(g.HRID_undup.transform('count') == 1, '')
 
     return df
 
