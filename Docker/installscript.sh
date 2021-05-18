@@ -7,6 +7,9 @@ apt-get install -y git
 apt-get update && apt-get install -y libgl1-mesa-dev
 apt-get install -y graphviz
 apt-get install -y tesseract-ocr
+apt-get install -y tesseract-ocr-fra
+apt-get install -y tesseract-ocr-deu
+apt-get install -y tesseract-ocr-ita
 apt-get install -y curl unzip
 apt-get update && apt-get install -y poppler-utils
 apt-get install -y nodejs && apt-get install -y npm
