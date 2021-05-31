@@ -13,13 +13,12 @@ from datumaro.components.operations import IntersectMerge
 from datumaro.components.extractor import (Importer, Extractor, Transform, DatasetItem, Bbox, AnnotationType, Label,
     LabelCategories, PointsCategories, MaskCategories)
 import zipfile
-from collections import OrderedDict
 import shutil
 #import random
 #from sklearn.model_selection import train_test_split
 #print(tf.version.VERSION)
 
-DIR = Path("E:/Traindata/Trainingdata_fromCVAT/mining_pages/")
+DIR = Path("E:/Traindata/Trainingdata_fromCVAT/mining_figures/OCKquick/")
 
 TRAIN_PART = 0.7
 
@@ -56,6 +55,7 @@ def unzip_tfrecords(path):
                             target = open(tfrecordfiles['pbtxtpath'], "wb")
                             with source, target:
                                 shutil.copyfileobj(source, target)
+                print(tfrecordfiles)
                 listoftfrecordfiles.append(tfrecordfiles)
                 #zip_ref.extractall(DIR)
                 i = i + 1
@@ -109,41 +109,48 @@ def extract_fn(data_record):
     image = tf.image.decode_image(dense, dtype=tf.float32) 
 
     return dense, image, label
-def correctionsMiningPages(listoftrainsets,listoftestsets,listofvalsets):
+def correctionsMiningPages(listoftrainsets,listoftestsets):
     merger = IntersectMerge()
     merged_trainset = merger(listoftrainsets)
     del listoftrainsets
     merged_trainset = merged_trainset.transform('remap_labels', {'stampbox': 'infoframe' }, default='keep')
+    merged_trainset = merged_trainset.transform('remap_labels', {'pageid': 'figureid' }, default='keep')
     trainset_path = os.path.join(DIR, 'trainset.tfrecord')
+    print('trainset')
+    print(merged_trainset.categories())
+    print(len(merged_trainset))
     merged_trainset.export(trainset_path, 'tf_detection_api', save_images=True)
     merged_testset = merger(listoftestsets)
     del listoftestsets
+
     merged_testset = merged_testset.transform('remap_labels', {'stampbox': 'infoframe' }, default='keep')
+    
+    merged_testset = merged_testset.transform('remap_labels', {'pageid': 'figureid' }, default='keep')
     testset_path = os.path.join(DIR, 'testset.tfrecord')
+    print('testset')
+    print(merged_testset.categories())
+    print(len(merged_testset))
     merged_testset.export(testset_path, 'tf_detection_api', save_images=True)
-    merged_valset = merger(listofvalsets)
-    del listofvalsets
-    merged_valset = merged_valset.transform('remap_labels', {'stampbox': 'infoframe' }, default='keep')
-    valset_path = os.path.join(DIR, 'valset.tfrecord')
-    merged_valset.export(valset_path, 'tf_detection_api', save_images=True)
+    
 
 def splitEachRecord(listoftfrecordfiles):
     listoftrainsets = []
     listoftestsets = []
-    listofvalsets = []
     for record in listoftfrecordfiles:
         print(record['name'])
         
         
         dataset= Dataset.import_from(record['tfrpath'], 'tf_detection_api')
-        cleanset = dataset.select(lambda item: len(item.annotations) <= 2)
-        for item in cleanset:
-            print(item.annotations)
+        #cleanset = dataset.select(lambda item: len(item.annotations) <= 2)
+        #for item in cleanset:
+            #print(item.annotations)
 
 
         print(record['tfrpath'])
         if 'task_mining_figures_zenonid_000066595_300pages-2021_02_16_12_47_10-tfrecord 1.0' in record['name']:
+            print(len(dataset))
             dataset=dataset.select(lambda item: len(item.annotations) != 0)
+            print(len(dataset))
         if 'task_mining_pages_zenonid_000147534_selectedpages-2021_02_23_16_00_02-tfrecord 1.0' in record['name']:
             dataset = dataset.transform('remap_labels', {'stampfigure':'stampfigure','vesselprofilefigure': 'vesselprofilefigure', 'pageid':'pageid', 'pageinfo':'pageinfo', 'vesselimage':'vesselimage' }, default='delete')
         if 'task_mining_pages_zenonid_000009465-2020_11_10_09_30_39-tfrecord 1.0' in record['name']:
@@ -153,37 +160,29 @@ def splitEachRecord(listoftfrecordfiles):
         if 'task_zenonid_001344933_and_zenonid_001346932-2020_11_12_14_13_46-tfrecord 1.0' in record['name']:
             dataset = dataset.transform('remap_labels', {'stampfigure':'stampfigure','vesselprofilefigure': 'vesselprofilefigure', 'pageid':'pageid', 'pageinfo':'pageinfo', 'vesselimage':'vesselimage' }, default='delete')
 
-        splitted = transforms.RandomSplit(dataset, splits=[('train', 0.60), ('test', 0.15), ('val', 0.25)])
+        splitted = transforms.RandomSplit(dataset, splits=[('train', 0.75), ('test', 0.25)])
         train = splitted.get_subset('train')
         trainset = Dataset.from_extractors(train)
         test = splitted.get_subset('test')
         testset = Dataset.from_extractors(test)
-        val = splitted.get_subset('val')
-        valset = Dataset.from_extractors(val)
+
         #train, test = splitter
         listoftrainsets.append(trainset)
         listoftestsets.append(testset)
-        listofvalsets.append(valset)
-
-    return listoftrainsets,listoftestsets,listofvalsets
 
 
-#listoftfrecordfiles = unzip_tfrecords(DIR)
+    return listoftrainsets,listoftestsets
 
-#listoftrainsets,listoftestsets,listofvalsets = splitEachRecord(listoftfrecordfiles)
-#print(listoftestsets)
-#correctionsMiningPages(listoftrainsets,listoftestsets,listofvalsets)
+
+listoftfrecordfiles = unzip_tfrecords(DIR)
+
+listoftrainsets,listoftestsets = splitEachRecord(listoftfrecordfiles)
+print(listoftestsets)
+correctionsMiningPages(listoftrainsets,listoftestsets)
 
 # load a Datumaro project
 #project = Project.load('E:/Traindata/Trainingdata_fromCVAT/mining_pages/datumaroproject')
-dataset= Dataset.import_from('F:/mhaibt/NextcloudSync/iDAI.shapes/Data Examples/datumaro_issue/Lattara6_pages.tfrecord', 'tf_detection_api')
-datasetimages = dataset.select(lambda item: item.has_image)
-#dataset.export('/home/images/OUTPUT/Lattara6_pages_reimport2.tfrecord', 'tf_detection_api', save_images=True)
-label_categories = dataset.categories().get(AnnotationType.label,LabelCategories())
-label_ids = OrderedDict((label.name, 1 + idx) for idx, label in enumerate(label_categories.items))
-#get_label = lambda label_id: label_categories.items[1].name if label_id is not None else ''
-print(label_categories)
-print(label_categories.items[1].name)
+
 
 
 #dataset = Dataset.from_extractors(dataset1, dataset2)
