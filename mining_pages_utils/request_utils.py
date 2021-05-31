@@ -21,7 +21,7 @@ def getZenonBibtex(series):
     result = requests.get(exporturl + exportstyle)
     print(result.text)
     parse_string
-    
+    pybtex.errors.set_strict_mode(False)
     data = parse_string(result.text, 'bibtex')
     del data.entries[str(series['pub_value'])].fields['crossref']
     #list(data.entry.fields.keys())

@@ -56,7 +56,7 @@ GRAPH = '/frozen_inference_graph.pb'
 LABELS = '/label_map.pbtxt'
 PAGE_MODEL = '/home/models/faster_rcnn_resnet50_v1_800x1333_coco17_gpu-8_miningpagesv12'
 SAVEDMODEL = '/saved_model'
-FIGID_MODEL = '/home/models/faster_rcnn_resnet50_v1_800x1333_coco17_gpu-8_miningfiguresv5_OCKquickv3'
+FIGID_MODEL = '/home/models/faster_rcnn_resnet50_v1_800x1333_coco17_gpu-8_miningfiguresv5'
 SEG_MODEL = '/home/models/shape_segmentation/train_colab_20200610.h5'
 OUTPATH = '/home/images/OUTPUT/'
 VESSELLPATH = OUTPATH + 'vesselprofiles/'
@@ -137,10 +137,9 @@ all_detections_step2 = all_detections_step2.merge(page_category_index, on=['dete
 
 
 # %%
-def pdfpage2realpage(series):
-    if 'pdfpage2realpage' in series.keys():
-        series['pageid_clean'] = int(int(series['page_pdfid']) + int(series['pdfpage2realpage']))
-    return series
+
+
+
 
 pageids = filter_best_page_detections(all_detections_step2 , lowest_score=0.8)
 bestpages = choose_pageid(pageids)
@@ -154,9 +153,27 @@ for index, row in bestpages.iterrows():
     row['newinfo'] = result
     
     pageid_raw = pageid_raw.append(row)
-all_detections_step3 = merge_info(all_detections_step2, pageid_raw)
-all_detections_step3 = all_detections_step3.apply(ocr_post_processing_pageid, axis=1)
+all_detections_step3a = merge_info(all_detections_step2, pageid_raw)
+
+
+# %%
+def guessPdfpageDistance(series):
+    if isinstance(series['pageid_clean'], str):
+        series['pageDistance'] = int(int(series['page_pdfid']) - int(series['pageid_clean']))
+    return series
+
+def pdfpage2realpage(series):
+    if 'pdfpage2realpage' in series.keys() and series.get('pdfpage2realpage') is not None :
+        series['pageid_clean'] = int(int(series['page_pdfid']) + int(series['pdfpage2realpage']))
+    else:
+        guessPdfpageDistance(series)
+
+    return series
+
+
+all_detections_step3 = all_detections_step3a.apply(ocr_post_processing_pageid, axis=1)
 all_detections_step3 = all_detections_step3.apply(pdfpage2realpage, axis=1)
+#all_detections_step3 = smoothPageCorrection(all_detections_step3)
 
 
 
@@ -251,7 +268,7 @@ def ocr_post_processing_figure(row, detection):
     print(detection['detection_classesname'])
     if row[str(detection['detection_classesname']) + '_raw']:
         #print(detection['detection_classesname'])
-        #print (row[str(detection['detection_classesname']) + '_raw'])
+        print (row[str(detection['detection_classesname']) + '_raw'])
         if str(detection['detection_classesname']) + '_exclude_strings' in list(row.keys()):
             for exclude_string in row[str(detection['detection_classesname']) + '_exclude_strings']:
                 row[str(detection['detection_classesname']) + '_raw'].replace(exclude_string,"")
@@ -518,9 +535,20 @@ def getOldIds(series, olddocs_df):
 
 def findExistingIdentifiers(newDOC, oldDOC):
     return sameIdentifierDOC
+
+def divide_chunks(l, n):
+    # looping till length l
+    for i in range(0, len(l), n): 
+        yield l[i:i + n]
 def bulkSaveChanges(DOC, pouchDB_url_bulk, auth ):
-    answer = requests.post(pouchDB_url_bulk , auth=auth, json=DOC)
-    return print(answer)
+    chunks = list(divide_chunks(DOC['docs'], 200))
+    for chunk in chunks:
+        #print(json.dumps(chunk, indent=4, sort_keys=True))
+        chunkhull = {'docs':[]}
+        chunkhull['docs'] = chunk
+        answer = requests.post(pouchDB_url_bulk , auth=auth, json=chunkhull)
+        print(answer)
+    return print('Documents uploaded')
 def pageCorrStat(df):
     return pageDistance
 def pageCorrection(series):
@@ -602,7 +630,7 @@ def createDrawingDocs (series, docshull):
     if series['pub_key'] == 'ZenonID':
         litdict = {'zenonId' : str(series['pub_value']), 'quotation' : str(series['pub_quote'])}
     if series.get('pageid_clean') is not None:
-        litdict['page'] = str(int(series['pageid_clean']))
+        litdict['page'] = str(series['pageid_clean'])
     if series.get("figureid_clean") is not None:
         litdict['figure'] = str(series['figureid_clean'])
     resource['literature'].append(litdict)
@@ -627,6 +655,8 @@ def createCatalogDrawingDocs (series, docshull):
     resource['literature'] = []
     if series['pub_key'] == 'ZenonID':
         resource['literature'].append({'zenonId' : str(series['pub_value']), 'quotation' : str(series['pub_quote']) })
+    resource['relations'] = {}
+    resource['relations']['depicts']=[str(series['catalog_uuid'])]
     doc['resource'] = resource
     return docshull['docs'].append(doc)
 def makeUuid (series, fieldname):
@@ -660,7 +690,7 @@ def createTypeDocs (series, docshull, useuuid, useidentifier, liesWithin= None, 
     if series['pub_key'] == 'ZenonID':
         litdict = {'zenonId' : str(series['pub_value']), 'quotation' : str(series['pub_quote'])}
     if series.get("pageid_clean") is not None:
-        litdict['page'] = str(int(series['pageid_clean']))
+        litdict['page'] = str(series['pageid_clean'])
     if series.get("figureid_clean") is not None:
         litdict['figure'] = str(series['figureid_clean'])
     resource['literature'].append(litdict)
@@ -692,6 +722,66 @@ def getCatalogCover(df):
         firstrow['catalogcover_height'] = height
 
     return firstrow
+
+
+
+def createRelationMapping(docs, relation):
+    mapdictlist = []
+    for doc in docs:
+        if relation in doc['resource']['relations'].keys():
+            for relateddocid in doc['resource']['relations'][relation]:
+                mapdict = {}
+                mapdict[relation + 'id']= relateddocid
+                mapdict['docid']= doc['_id']
+                mapdictlist.append(mapdict)
+    
+    return mapdictlist
+
+def writeReverseRelation(df, mapdicts, relation, rev_relation):
+    newdf = pd.DataFrame()
+    for index,row in df.iterrows():
+        docids = [item['docid'] for item in mapdicts if item[relation + 'id']==row['_id']]
+        if docids:
+            if not 'relations' in row.keys():
+                row['relations']= {}
+            row['relations'][rev_relation]= docids
+            newdf= newdf.append(row)
+    return newdf
+
+def DOCtoDF(DOC):
+    DFdocs = pd.DataFrame(DOC)
+    print(DFdocs.columns)
+    DFdocs = DFdocs.drop('resource', axis=1)
+    DFresources = pd.DataFrame([i['resource'] for i in DOC])
+    for col in DFdocs.columns:
+        DFresources[str(col)]=DFdocs[str(col)]
+    docfields = DFdocs.columns
+
+    return DFresources, docfields
+   
+
+def DFtoDOC(DFresources, docfields):
+    DF = DFresources
+    columns = [i for i in DFresources.columns if not i in docfields]
+    #print(columns)
+    DOC = []
+    for index,row in DF.iterrows():
+        #print(type(row[columns]))
+        #dd = defaultdict(list)
+        #print('Before DROP:')  
+        cleanrow=row[columns].dropna() 
+        #äprint(cleanrow)
+        row['resource']= cleanrow.to_dict()
+        #row['resource'] = {k: row['resource'][k] for k in row['resource'] if not isnan(row['resource'][k])}
+        #print(row)
+        #print('After DROP:')
+        row = row.drop(columns)
+        #print(row)
+
+        DOC.append(row.to_dict())
+    DOChull={}
+    DOChull['docs']=DOC
+    return DOChull
 
 
 projects_grouped = figures_step4.groupby('exportProject')
@@ -744,7 +834,7 @@ for name, group in projects_grouped:
     group_drawingsclean = group_drawingsclean.apply(pathToStore, axis=1)
     
     group_drawingsclean.apply(imageToStore, axis=1)
-    bulkSaveChanges(cleannewDocs, pouchDB_url_bulk, auth )
+    
     pub_grouped = group.groupby('catalog_id')
     
     for pub_name, pub_group in pub_grouped :
@@ -752,15 +842,16 @@ for name, group in projects_grouped:
         #print(pub_group)
         catalogrow = getCatalogCover(pub_group)
         catalogrow['catalogcoverdrawing_uuid'] = str(uuid.uuid4())
+        catalogrow['catalog_uuid'] = str(uuid.uuid4())
         CatalogDrawingDocs = {"docs" : []}
         createCatalogDrawingDocs (catalogrow, CatalogDrawingDocs)
         bulkSaveChanges(CatalogDrawingDocs, pouchDB_url_bulk, auth )
         shutil.copyfile(str(catalogrow['catalogcoverpath']), os.path.join(catalogrow['imagestore'], catalogrow['exportProject'], os.path.basename(catalogrow['catalogcoverdrawing_uuid']).replace('.png','') ))
-        catalogrow['catalog_uuid'] = str(uuid.uuid4())
+        
         pub_group['catalog_uuid'] = catalogrow['catalog_uuid'] 
         CatalogDocs = {"docs" : []}
         createCatalogDocs(catalogrow, docshull=CatalogDocs)
-        bulkSaveChanges(CatalogDocs, pouchDB_url_bulk, auth )
+        
         TypeDocs = {"docs" : []}
         #print(type(pub_group['infoframe_becomesCategory']))
         if 'Type' in pub_group.iloc[0]['infoframe_becomesCategory']:
@@ -784,7 +875,22 @@ for name, group in projects_grouped:
                 continue
 
 
-        #print(json.dumps(TypeDocs, indent=4, sort_keys=True))
+
+        
+        DrawingsDF, docfields = DOCtoDF(cleannewDocs['docs'])
+        print('length of TypeDoc: ', len(TypeDocs['docs']))
+        isDepictedIn_map = createRelationMapping(TypeDocs['docs'], relation='isDepictedIn')
+        print('length of mapping: ', len(isDepictedIn_map))
+        print(isDepictedIn_map)
+        DrawingsDF = writeReverseRelation(DrawingsDF, mapdicts=isDepictedIn_map, relation='isDepictedIn', rev_relation='depicts')
+        #DFresources = removeUndepicts(DFresources)
+        print('length with depicts: ', len(DrawingsDF))
+        #DrawingsDF = DrawingsDF.apply(addModifiedEntry, axis=1)
+        DrawingsDOC = DFtoDOC(DrawingsDF, docfields)
+        
+        
+        bulkSaveChanges(DrawingsDOC, pouchDB_url_bulk, auth )
+        bulkSaveChanges(CatalogDocs, pouchDB_url_bulk, auth )
         bulkSaveChanges(TypeDocs, pouchDB_url_bulk, auth )
 
 

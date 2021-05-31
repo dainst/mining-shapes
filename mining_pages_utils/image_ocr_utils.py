@@ -196,8 +196,6 @@ def ocr_post_processing_pageid(row):
     result = re.search(pageid_regex, pageid_raw)
     if result:
         row['pageid_clean'] = result.group(1)
-    else:
-        row['pageid_clean'] = 'none'
 
     return row
 

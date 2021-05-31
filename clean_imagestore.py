@@ -24,7 +24,7 @@ FIG_SIZE = [20,30]
 
 def getAllDocs():
     querydict={'selector':{}}
-    querydict['selector']['resource.id'] = {'$gt': 'Null'}
+    querydict['selector']['_id'] = {'$gt': None}
     response = requests.post(pouchDB_url_find, auth=auth, json=querydict)
     result = json.loads(response.text)
     return result
