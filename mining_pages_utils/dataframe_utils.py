@@ -158,11 +158,10 @@ def provide_pagelist(dataframe: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(pagelist)
 
 
-def extract_pdfid(series):
-    reg_pdfpageid = re.compile(os.path.basename(
-        series['pubpdf_path'])+'[0-9]*-([0-9]*)\.png')
-    series['page_pdfid'] = int(
-        re.search(reg_pdfpageid, series['page_imgname']).group(1))
+def extract_pdfid(series, readfield, writefield ):
+    reg_pdfpageid = re.compile(series['pdfid_regex'])
+    series[writefield] = int(
+        re.search(reg_pdfpageid, series[readfield]).group(1))
     return series
 
 
@@ -198,16 +197,21 @@ def unfold_pagedetections(df: pd.DataFrame) -> pd.DataFrame:
 def page_detections_toframe(df: pd.DataFrame) -> pd.DataFrame:
     all_detections = []
     for index, row in df.iterrows():
-        N = int(row['page_detections']['num_detections'])
-        for i in range(0, N):
-            detection = row
-            #detection.drop('detection_boxes', inplace=True)
-            detection['detection_boxes'] = row['page_detections']['detection_boxes'][i]
-            #detection.drop('detection_classes', inplace=True)
-            detection['detection_classes'] = row['page_detections']['detection_classes'][i]
-            #detection.drop('detection_scores', inplace=True)
-            detection['detection_scores'] = row['page_detections']['detection_scores'][i]
-            all_detections.append(detection.copy())
+        if not row['annotations']:
+            N = int(row['page_detections']['num_detections'])
+            for i in range(0, N):
+                detection = row
+                #detection.drop('detection_boxes', inplace=True)
+                detection['detection_boxes'] = row['page_detections']['detection_boxes'][i]
+                #detection.drop('detection_classes', inplace=True)
+                detection['detection_classes'] = row['page_detections']['detection_classes'][i]
+                #detection.drop('detection_scores', inplace=True)
+                detection['detection_scores'] = row['page_detections']['detection_scores'][i]
+                all_detections.append(detection.copy())
+        if row['annotations']:
+            for i in row['annotations']:
+                detection = row
+                print(i, type(i))
 
     return pd.DataFrame(all_detections)
 
@@ -280,6 +284,8 @@ def filter_best_vesselprofile_detections(all_detections: pd.DataFrame, lowest_sc
     """
     bestdetections = pd.DataFrame()
     for index, row in all_detections.iterrows():
+        print(row['detection_scores'], row['detection_classesname'] )
+    
         if row['detection_classesname'] in row['allowedFigureDetections'] + row['allowedFrameDetections']  and row['detection_scores'] >= lowest_score:
             bestdetections = bestdetections.append(row)
     return bestdetections
