@@ -23,6 +23,11 @@ def getZenonBibtex(series):
     parse_string
     pybtex.errors.set_strict_mode(False)
     data = parse_string(result.text, 'bibtex')
+    datadict = vars(data.entries[str(series['pub_value'])].fields)
+    if not 'publisher' in datadict['_dict'].keys():
+        data.entries[str(series['pub_value'])].fields['publisher'] = 'unknown'
+    if not 'journal' in datadict['_dict'].keys():
+        data.entries[str(series['pub_value'])].fields['journal'] = 'unknown'
     del data.entries[str(series['pub_value'])].fields['crossref']
     #list(data.entry.fields.keys())
     bib_data = data.to_string('bibtex')

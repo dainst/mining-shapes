@@ -119,6 +119,7 @@ def load_page(row):
     page_imgnp = cv2.imread(str(row['page_path']))
     print(str(row['page_path']))
     assert len(page_imgnp.shape) == 3
+    print(page_imgnp.shape)
     page_height, page_width, page_channel = page_imgnp.shape
     row['page_width'] = page_width
     row['page_height'] = page_height

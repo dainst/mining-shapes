@@ -12,6 +12,12 @@ from datumaro.components.dataset import Dataset
 import math
 import shutil
 import requests
+
+from io import BytesIO
+import IPython.display
+#import numpy as np
+
+
 from decimal import Decimal
 import tensorflow as tf
 from pathlib import Path
@@ -58,9 +64,9 @@ INPUTDIRECTORY = '/home/images/apply'
 ANNOTDIR =  '/home/images/HUMAN_CORR'
 GRAPH = '/frozen_inference_graph.pb'
 LABELS = '/label_map.pbtxt'
-PAGE_MODEL = '/home/models/faster_rcnn_resnet101_v1_1024x1024_coco17_miningpagesv10'
+PAGE_MODEL = '/home/models/faster_rcnn_resnet50_v1_800x1333_coco17_gpu-8_miningpagesv12'
 SAVEDMODEL = '/saved_model'
-FIGID_MODEL = '/home/models/faster_rcnn_resnet50_v1_800x1333_coco17_gpu-8_miningfiguresv5_Hayes1972quickv2'
+FIGID_MODEL = '/home/models/faster_rcnn_resnet50_v1_800x1333_coco17_gpu-8_miningfiguresv5'
 SEG_MODEL = '/home/models/shape_segmentation/train_colab_20200610.h5'
 OUTPATH = '/home/images/OUTPUT/'
 VESSELLPATH = OUTPATH + 'vesselprofiles/'
@@ -72,7 +78,11 @@ CLEANCSVOUT = OUTPATH + 'mining_pages_clean.csv'
 
 
 
-
+def showarray(a, fmt='png'):
+    a = np.uint8(a)
+    f = BytesIO()
+    Image.fromarray(a).save(f, fmt)
+    IPython.display.display(IPython.display.Image(data=f.getvalue()))
 
 
 
@@ -90,8 +100,8 @@ pagelist = pagelist.apply(extract_pdfid, writefield='page_pdfid', readfield='pag
 double_to_singlepage(pagelist)
 pagelist = provide_pagelist(pdflistv2)
 pagelist = pagelist.apply(extract_pdfid, writefield='page_pdfid', readfield='page_imgname', axis=1)
+print(pagelist['page_pdfid'])
 #pagelist = select_pdfpages(pagelist)
-
 
 
 
@@ -167,22 +177,24 @@ def exportImagesOfDatumaroDataset(dataset):
 if 'nameOfPageAnnotations' in pagelist.columns:
     pagelist = pagelist.apply(unzip_tfrecords, readfield='nameOfPageAnnotations', axis=1)
 pagelistannots = pd.DataFrame()
-for name,group in pagelist.groupby('nameOfPageAnnotations' + 'Path'):
-    if Path(group.iloc[0]['nameOfPageAnnotationsPath']).exists():
-        dataset = importTFrecords(group.iloc[0], readfield = 'nameOfPageAnnotationsPath')
-        
-        #dataset.export(DATASETEXPORT, 'tf_detection_api', save_images=True)
-        DatumaroDF = DatumaroDatasetToDF(dataset)
-        exportImagesOfDatumaroDataset(DatumaroDF)
-        DatumaroDF['pdfid_regex'] = group.iloc[0]['pdfid_regex']
-        DatumaroDF = DatumaroDF.apply(extract_pdfid, writefield='datumaro_page_pdfid', readfield='id', axis=1)
-        DatumaroDF = DatumaroDF.drop(columns=['pdfid_regex']).set_index('datumaro_page_pdfid')
-        group = group.set_index('page_pdfid')
-        groupannotated = group.join(DatumaroDF, how='left', lsuffix='', rsuffix='', sort=False)
-        groupannotated = groupannotated.reset_index()
-    pagelistannots = pagelistannots.append(groupannotated)
+if 'nameOfPageAnnotations' in pagelist.columns:
+    for name,group in pagelist.groupby('nameOfPageAnnotations' + 'Path'):
+        if Path(group.iloc[0]['nameOfPageAnnotationsPath']).exists():
+            dataset = importTFrecords(group.iloc[0], readfield = 'nameOfPageAnnotationsPath')
+            
+            #dataset.export(DATASETEXPORT, 'tf_detection_api', save_images=True)
+            DatumaroDF = DatumaroDatasetToDF(dataset)
+            exportImagesOfDatumaroDataset(DatumaroDF)
+            DatumaroDF['pdfid_regex'] = group.iloc[0]['pdfid_regex']
+            DatumaroDF = DatumaroDF.apply(extract_pdfid, writefield='datumaro_page_pdfid', readfield='id', axis=1)
+            DatumaroDF = DatumaroDF.drop(columns=['pdfid_regex']).set_index('datumaro_page_pdfid')
+            group = group.set_index('page_pdfid')
+            groupannotated = group.join(DatumaroDF, how='left', lsuffix='', rsuffix='', sort=False)
+            groupannotated = groupannotated.reset_index()
+        pagelistannots = pagelistannots.append(groupannotated)
+else:
+    pagelistannots = pagelist
 
-print(pagelistannots['id'])
     #for item in dataset:
         #print(vars(item))
         #item_dict = extract_pdfid(vars(item), writefield='page_pdfid', readfield='id')
@@ -204,7 +216,7 @@ for path in [VESSELLPATH, SEGMENTPATH]:
 all_detections_step1 = pd.DataFrame()
 miningpagesdetectfn = build_detectfn(PAGE_MODEL + SAVEDMODEL)
 for index, row in pagelistannots.iterrows():
-    if not row['annotations'] or 'annotations' not in row.keys():
+    if 'nameOfPageAnnotations' not in row.keys() or not row['nameOfPageAnnotations'] :
         print('Page ' + os.path.basename(row['page_path']))
 
         row, page_imgnp = load_page(row)
@@ -219,9 +231,9 @@ for index, row in pagelistannots.iterrows():
         detections['num_detections'] = num_detections
         row['page_detections']= detections
         print(row['page_detections'])
-        print(row['annotations'])
+        #print(row['annotations'])
         #all_detections_step1 = all_detections_step1.append(row)
-    if 'annotations' in row.keys() and row['annotations']:
+    if 'nameOfPageAnnotations' in row.keys() and row['nameOfPageAnnotations'] :
         img = DatumaroImageToArray(row, readfield='image')
         print('Datumaro page ',img.shape)
         height, width, channel = img.shape
@@ -230,7 +242,7 @@ for index, row in pagelistannots.iterrows():
         row['page_channel'] = channel
     all_detections_step1 = all_detections_step1.append(row)
 print(len(all_detections_step1))
-#print(all_detections_step1['page_width'])
+print(all_detections_step1['page_pdfid'])
 
 
 
@@ -257,7 +269,7 @@ def absTorelImagecoords(box, width, height):
     return newcoords
 def relToabsImagecoords(box, width, height):
     ymin , xmin , ymax , xmax = box
-    abs_xmin = int(float(xmin)* float(height))
+    abs_xmin = int(float(xmin)* float(width))
 
     abs_ymin = int(float(ymin)* float(height))
     abs_xmax = int(float(xmax)* float(width))
@@ -268,12 +280,13 @@ def relToabsImagecoords(box, width, height):
 def page_detections_toframe(df: pd.DataFrame) -> pd.DataFrame:
     all_detections = pd.DataFrame()
     for index, row in df.iterrows():
-        if not row['annotations'] or 'annotations' not in row.keys():
+        if 'nameOfPageAnnotations' not in row.keys() or not row['nameOfPageAnnotations'] :
             N = int(row['page_detections']['num_detections'])
             for i in range(0, N):
                 detection = row
                 #detection.drop('detection_boxes', inplace=True)
                 detection['detection_boxes'] = row['page_detections']['detection_boxes'][i]
+                print(detection['detection_boxes'])
                 #detection.drop('detection_classes', inplace=True)
                 detection['detection_classes'] = row['page_detections']['detection_classes'][i]
                 #detection.drop('detection_scores', inplace=True)
@@ -281,7 +294,7 @@ def page_detections_toframe(df: pd.DataFrame) -> pd.DataFrame:
                 #if 'page_detections' in detection.keys():
                     #detection.pop('page_detections')
                 all_detections = all_detections.append(detection)
-        if 'annotations' in row.keys() and row['annotations']:
+        if 'nameOfPageAnnotations' in row.keys() and row['nameOfPageAnnotations'] :
             for i in row['annotations']:
                 #print(row['page_pdfid'], vars(i))
                 annotation = vars(i)
@@ -322,11 +335,14 @@ def cut_image(row):
     @param dataframe dataframe with image and ROI metadata
     """
     page_imgnp = cv2.imread(row['page_path'])
+    #showarray(page_imgnp, fmt='png')
     #print(page_imgnp.shape)
     box = row['detection_boxes']
     print(row['detection_boxes'])
     print(page_imgnp.shape)
+    print(row['page_width'], row['page_height'])
     ymin, xmin, ymax, xmax = relToabsImagecoords(box, width = row['page_width'], height = row['page_height'])
+    print(ymin, xmin, ymax, xmax)
 
     bbox_np = page_imgnp[ymin:ymax, xmin:xmax]
     return bbox_np
@@ -339,6 +355,8 @@ pageid_raw = pd.DataFrame()
 #perform ocr page number
 for index, row in bestpages.iterrows():
     img = cut_image(row)
+    #showarray(img, fmt='png')
+    
     img2 = ocr_pre_processing_page(img)
     result = pytesseract.image_to_string(img2, config=row['pageid_config'])
     row['newinfo'] = result
@@ -356,8 +374,7 @@ def guessPdfpageDistance(series):
 def pdfpage2realpage(series):
     if 'pdfpage2realpage' in series.keys() and series.get('pdfpage2realpage') is not None :
         series['pageid_clean'] = int(int(series['page_pdfid']) +  int(series['pdfpage2realpage']))
-    else:
-        guessPdfpageDistance(series)
+
 
     return series
 
@@ -368,10 +385,6 @@ all_detections_step3 = all_detections_step3.apply(pdfpage2realpage, axis=1)
 #all_detections_step3 = smoothPageCorrection(all_detections_step3)
 print()
 figures = filter_best_vesselprofile_detections(all_detections_step3, lowest_score= 0.8)
-
-
-# %%
-print(figures)
 
 
 # %%
@@ -404,13 +417,22 @@ def cut_image_savetemp(row, img, outpath_base) -> pd.DataFrame:
     @brief Select an ROI from image and writes detected vesselprofile to disk
     @param dataframe dataframe with image and ROI metadata
     """
+    page_imgnp = cv2.imread(row['page_path'])
+    #showarray(page_imgnp, fmt='png')
+    #print(page_imgnp.shape)
     box = row['detection_boxes']
-
+    print(row['detection_boxes'])
+    print(page_imgnp.shape)
+    print(row['page_width'], row['page_height'])
     ymin, xmin, ymax, xmax = relToabsImagecoords(box, width = row['page_width'], height = row['page_height'])
+    print(ymin, xmin, ymax, xmax)
 
-    figure_imgnp = img[ymin:ymax, xmin:xmax]
+    figure_imgnp = page_imgnp[ymin:ymax, xmin:xmax]
+
+
     #print('This is the shape of cut out figure ',figure_imgnp.shape)
-    
+    if row['page_pdfid'] in row['rotateCWFiguresOnpdfpages']['rotatepages']:
+        figure_imgnp = cv2.rotate(figure_imgnp, cv2.cv2.ROTATE_90_CLOCKWISE)
     figure_height, figure_width, figure_channel = figure_imgnp.shape
     row['figure_height'] = figure_height
     row['figure_width'] = figure_width
@@ -461,7 +483,9 @@ for index, row in figures.iterrows():
         #page_imgnp = DatumaroImageToArray(row, readfield = 'image')
     #if 'nameOfFigureAnnotations' not in row.keys():
     page_imgnp = cv2.imread(row['page_path'])
+
     row, figure_imgnp = cut_image_savetemp(row, img = page_imgnp, outpath_base=VESSELLPATH)
+    
     row['dhash'] = imagehash.dhash(Image.fromarray(np.uint8(figure_imgnp)))
     #print(row['dhash'])
     
@@ -549,12 +573,17 @@ def ocr_replacestrings(replace_strings, text):
 
 
 def ocr_post_processing_figure(row, detection, matchgroup):
+    ### test regex-shortcut ###
+    #row['infoframeid_regex']='(FORM\\s?|FORMS\\s?|FO..\\s?|F.R.\\s?|F..M\\s?|.OR.\\s?|..RM\\s?)([0-9]{1,3})'
+    #row['figureid_regex']='([0-9]{1,2}\\s[A-Z]|[0-9]{1,2})'
     if detection['detection_classesname'] + '_raw' in row.keys():
+        print('This is ' + str(detection['detection_classesname'] + '_raw') + ': ' + row[str(detection['detection_classesname'] + '_raw')])
         row[str(detection['detection_classesname']) + '_raw'] = ocr_replacestrings(replace_strings = row[str(detection['detection_classesname']) + '_replace_strings'], text = row[str(detection['detection_classesname']) + '_raw'] )
 
 
 
         if str(detection['detection_classesname']) + '_regex' in list(row.keys()):
+            row[str(detection['detection_classesname']) + '_raw'] = ocr_replacestrings(replace_strings = row[str(detection['detection_classesname']) + '_replace_strings'], text = row[str(detection['detection_classesname']) + '_raw'] )
             regex = re.compile(row[str(detection['detection_classesname']) + '_regex'])
             result = re.search(regex, row[str(detection['detection_classesname']) + '_raw'])
             if result is not None:
@@ -562,7 +591,7 @@ def ocr_post_processing_figure(row, detection, matchgroup):
                 print('This was found in ' + detection['detection_classesname'] + '_clean: ' + row[str(detection['detection_classesname']) + '_clean'])
 
 
-            elif result is None and row.get(str(detection['detection_classesname']) + '_searchextensive'):
+            if result is None and row.get(str(detection['detection_classesname']) + '_searchextensive'):
                 print('Yes this will use textall! ')
                 row['textall_raw'] = ocr_replacestrings(replace_strings = row[str(detection['detection_classesname']) + '_replace_strings'], text = row['textall_raw'] )
                 regex = re.compile(row[str(detection['detection_classesname']) + '_regex'])
@@ -571,17 +600,18 @@ def ocr_post_processing_figure(row, detection, matchgroup):
                     row[str(detection['detection_classesname']) + '_clean'] = allresult.group(matchgroup)
                     print('This was found in textall ' + detection['detection_classesname'] + '_clean: ' + row[str(detection['detection_classesname']) + '_clean'])
 
-            elif str(detection['detection_classesname']) == 'figureid' and row.get('infoframeid_searchextensive'):
+            if str(detection['detection_classesname']) == 'figureid' and row.get('infoframeid_searchextensive'):
+                print('comparing figureid_raw with infoframe_regex')
                 row[str(detection['detection_classesname']) + '_raw'] = ocr_replacestrings(replace_strings = row['infoframeid_replace_strings'], text = row[str(detection['detection_classesname']) + '_raw'] )
+                print('After replace: ', row[str(detection['detection_classesname']) + '_raw'])
                 regex = re.compile(row['infoframeid_regex'])
                 antiresult = re.search(regex, row[str(detection['detection_classesname']) + '_raw'])
                 if antiresult is not None:
                     print(str(detection['detection_classesname']) + '_raw' + ' matches to infoframeid_regex and will be written as such')
                     row['infoframeid_clean'] = antiresult.group(int(row['infoframeid_regexgroup']))
-                    row[str(detection['detection_classesname']) + '_clean']  = None
+                    row[str(detection['detection_classesname']) + '_clean']  = np.NaN
             
-            else:
-                print('Fällt durchs Netz')
+
 
 
 
@@ -616,7 +646,7 @@ for index, row in figures_step2.iterrows():
         figure_imgnp = cv2.imread(row['figure_path'])
         figure_imgnp = ocr_pre_processing_page(figure_imgnp)
         row['textall_raw'] = pytesseract.image_to_string(figure_imgnp, config=row['textall_config'])
-        print(row['textall_raw'])
+        
         del figure_imgnp
         row = ocr_post_processing_textall(row)
     detections = []
@@ -652,12 +682,15 @@ def generateShapebox(series):
 def infosFromFrames(series, infoframes):
     for index, row in infoframes.iterrows():
         #if series['detection_shapebox'].within(row['detection_shapebox']):
-        if (series['detection_shapebox'].intersection(row['detection_shapebox']).area/series['detection_shapebox'].area)*100 > 60:
+        if (series['detection_shapebox'].intersection(row['detection_shapebox']).area/series['detection_shapebox'].area)*100 > 70:
             for info in row['frame_contains']:
-                if info + '_clean' in row.keys():
+                if info + '_clean' in row.keys() and pd.isnull(series[info + '_clean']) :
+                    print(series.get(info + '_clean'))
                     print('Iswithin ' + str(row[info + '_clean']))
+                    #print('Somethin is written in there ' +series[info + '_clean'])
                     series[info + '_raw'] = row[info + '_raw']
                     series[info + '_clean'] = row[info + '_clean']
+            series['textall_raw'] = row['textall_raw']
     return series
 
 def seperateFramesFigures(group):
@@ -683,9 +716,9 @@ figures_geodf2 = figures_geodf.groupby('page_path', as_index=False).apply(sepera
 
 
 # %%
-print(len(figures_geodf2['infoframeid_clean']), len(figures_geodf2['infoframeid_clean'].dropna()))
+#print(len(figures_geodf2['infoframeid_clean']), len(figures_geodf2['infoframeid_clean'].dropna()))
 print(len(figures_geodf2['figureid_clean']), len(figures_geodf2['figureid_clean'].dropna()))
-print(figures_geodf2[['infoframeid_clean','figureid_clean']])
+#print(figures_geodf2[['infoframeid_clean','figureid_clean']])
 
 
 # %%
@@ -982,17 +1015,12 @@ def createTypeDocs (series, docshull, useuuid, useidentifier, liesWithin= None, 
     resource['id'] = str(series[useuuid])
     resource['identifier'] = str(series[useidentifier])
     #resource['id'] = str(series['catalogcoverdrawing_uuid'])
-    resource['shortDescription'] = 'infoframeid: ' + str(series.get('infoframeid_clean')) + ' ' + series['detection_classesname'] + ' ' +series['HRID']
+    resource['shortDescription'] =  'Page: '+ str(series.get('pageid_clean')) + ' infoframeid: ' + str(series.get('infoframeid_clean')) + ' figureid: ' + str(series.get('figureid_clean')) + ' ' + series['detection_classesname'] + ' ' +series['HRID']
     #resource['originalFilename'] = os.path.basename(series['figure_path'])
     #resource['width'] = int(series['figure_width'])
     #resource['height'] = int(series['figure_height'])
     #resource['id'] = str(series['figure_tmpid'])
-    if 'textall_clean' in series.keys():
-        resource['description'] = 'textall: ' + str(series['textall_raw'] )
-    if 'pageinfo_clean' in series.keys():
-        resource['description'] += 'pageinfo: ' + str(series['pageinfo_clean'])
-    if 'figureinfo_clean' in series.keys():
-        resource['description'] += 'figureinfo: ' + str(series['figureinfo_clean'])
+    resource['description'] =  'infoframe_textall_raw: '+ str(series.get('textall_raw')) + ' infoframeid_raw: ' + str(series.get('infoframeid_raw')) + ' figureid_raw: ' + str(series.get('figureid_raw')) +  ' pageinfo_clean: ' + str(series.get('pageinfo_clean')) + ' figureinfo_clean: ' + str(series.get('figureid_raw')) 
     resource['literature'] = []
     if series['pub_key'] == 'ZenonID':
         litdict = {'zenonId' : str(series['pub_value']), 'quotation' : str(series['pub_quote'])}
@@ -1020,9 +1048,18 @@ def attachImagesToDoc(series, isDepictedIn, DOC):
 def getCatalogCover(df):
     if 'catalog_cover_pdfpage' in df.columns:
         firstrow = df.iloc[0]
-        convert_from_path(firstrow['pubpdf_path'], fmt='png', thread_count=1, output_file= 'CatalogCover_'+firstrow['catalog_id'], first_page=int(firstrow['catalog_cover_pdfpage']),dpi=200, single_file=True, paths_only=False, use_pdftocairo=True, output_folder=firstrow['pubfolder_path'])
-        
-        firstrow['catalogcoverpath']=os.path.join(firstrow['pubfolder_path'],'CatalogCover_'+firstrow['catalog_id']+'.png')
+        if 'expectImagesnotPdf' in firstrow.keys() and firstrow['expectImagesnotPdf']:
+            print(df['page_pdfid'].astype('int32'))
+            selection = pagelist[pagelist['page_pdfid'].astype('int32') == int(firstrow['catalog_cover_pdfpage'])]
+            print(selection)
+            selectionfirstrow = selection.iloc[0]
+            shutil.copyfile(str(selectionfirstrow['page_path']), os.path.join(firstrow['pubfolder_path'],'CatalogCover_'+firstrow['catalog_id']+'.png'))
+            firstrow['catalogcoverpath']=os.path.join(firstrow['pubfolder_path'],'CatalogCover_'+ firstrow['catalog_id']+'.png')
+        if not 'expectImagesnotPdf' in firstrow.keys() or not firstrow['expectImagesnotPdf']:
+
+            convert_from_path(firstrow['pubpdf_path'], fmt='png', thread_count=1, output_file= 'CatalogCover_'+firstrow['catalog_id'], first_page=int(firstrow['catalog_cover_pdfpage']),dpi=200, single_file=True, paths_only=False, use_pdftocairo=True, output_folder=firstrow['pubfolder_path'])
+            
+            firstrow['catalogcoverpath']=os.path.join(firstrow['pubfolder_path'],'CatalogCover_'+firstrow['catalog_id']+'.png')
         img = cv2.imread(firstrow['catalogcoverpath'])
         height, width, channels = img.shape
         firstrow['catalogcover_width'] = width
