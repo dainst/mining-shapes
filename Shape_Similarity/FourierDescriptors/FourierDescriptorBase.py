@@ -26,7 +26,8 @@ class FourierDescriptorBase(metaclass=ABCMeta):
         self.descriptor_harmonics = descriptor_harmonics
         self._normalize = normalize
         if isinstance(image_path, str):
-            self.images = glob.glob(f"{image_path}/*.jpg")
+            print(image_path)
+            self.images = glob.glob(f"{image_path}/*.png")
         else:
             raise ProvideListOfStr
 

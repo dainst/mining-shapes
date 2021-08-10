@@ -11,9 +11,13 @@ import numpy as np
 from collections import namedtuple
 import pandas as pd
 from PIL import Image
+from shutil import copyfile
+from pathlib import Path
 from typing import Tuple, List
 from object_detection.utils import dataset_util, ops
 import segmentation_models as sm
+
+
 
 # pylint: disable=import-error
 sys.path.append(os.path.abspath('/home/Code/Normalize_Shape'))
@@ -290,6 +294,16 @@ def run_inference(tensor_dict: dict, image: np.ndarray, session: tf.compat.v1.Se
 
     return output_dict
 
+def readNoextensionImage(file):
+    #filepath = os.path.join(tempfolder, os.path.basename(file) + '.' + extension)
+    openfile = open(file, 'rb')
+    image = np.asarray(bytearray(openfile.read()), dtype="uint8")
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+    
+
+    
+    return image
+
 
 def run_vesselprofile_segmentation(vesselpath: str,
                                    segmentpath: str,
@@ -305,7 +319,11 @@ def run_vesselprofile_segmentation(vesselpath: str,
     @param mark_black_img append black_ to image name if segmented image is all black
     @param resize_img resize image back to its original shape after segmentation
     """
+    sm.set_framework('tf.keras')
+
+    sm.framework()
     vessel_image_list = os.listdir(vesselpath)
+    #print(vessel_image_list)
 
     # load pretrained model
     seg_model = load_segmentation_model(modelpath)
@@ -313,9 +331,13 @@ def run_vesselprofile_segmentation(vesselpath: str,
     # predict segmentations and store to segmentpath
     prog_bar = tqdm(total=len(vessel_image_list)-1)
 
-    for img_name in [i for i in vessel_image_list if i.endswith('.jpg') or i.endswith('.png')]:
-        image = cv2.imread(os.path.join(
-            vesselpath, img_name), cv2.IMREAD_COLOR)
+    #for img_name in [i for i in vessel_image_list if i.endswith('.jpg') or i.endswith('.png')]:
+    for img_name in [i for i in vessel_image_list ]:
+        #imagepath = tempExtension(os.path.join(vesselpath, img_name), 'png', '/home/SEGMENTATION/')
+
+        #image = cv2.imread(imagepath, cv2.IMREAD_COLOR)
+        image = readNoextensionImage(os.path.join(vesselpath, img_name))
+
         height_orig, width_orig, *_ = image.shape
         image = cv2.resize(image, img_size)
         seg_img = seg_model.predict(image[np.newaxis, ...])
@@ -323,10 +345,10 @@ def run_vesselprofile_segmentation(vesselpath: str,
 
         if is_img_black(seg_img):
             save_path = os.path.join(
-                segmentpath, f"black_{img_name}" if mark_black_img else img_name)
+                segmentpath, f"black_{img_name}.png" if mark_black_img else f"{img_name}.png")
         else:
             seg_img = postprocess_image(seg_img, img_size, image.shape[:2],)
-            save_path = os.path.join(segmentpath, img_name)
+            save_path = os.path.join(segmentpath, img_name + '.png')
 
         if resize_img:
             cv2.imwrite(save_path, cv2.resize(

@@ -3,6 +3,8 @@ import os
 import pandas as pd
 import json
 import numpy as np
+from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from itertools import groupby
 import pybtex
@@ -14,6 +16,11 @@ iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
 
 
 
+
+def getListOfDBs():
+    response = requests.get(pouchDB_url_alldbs, auth=auth)
+    result = json.loads(response.text)
+    return result
 
 def getZenonBibtex(series):
     exporturl = 'https://zenon.dainst.org/Record/' + series['pub_value'] + '/Export?style='
