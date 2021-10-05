@@ -7,22 +7,27 @@ import operator
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import shutil
 from math import isnan
 import itertools
 from decimal import Decimal  
 #from decimal import Decimal  
-auth = ('', 'blub')
-db_url = 'http://host.docker.internal:3000'
-#db_name = 'shapes_import'
-#pouchDB_url_find = f'{db_url}/{db_name}/_find'
-#pouchDB_url_put = f'{db_url}/{db_name}/'
-#pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
-#pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
-pouchDB_url_alldbs = f'{db_url}/_all_dbs'
-imagestore = '/home/imagestore/'
-#exportProject = 'shapes_import'
+
 FIG_SIZE = [20,30]
 
+def divide_chunks(l, n):
+    # looping till length l
+    for i in range(0, len(l), n): 
+        yield l[i:i + n]
+def bulkSaveChanges(DOC, pouchDB_url_bulk, auth ):
+    chunks = list(divide_chunks(DOC['docs'], 200))
+    for chunk in chunks:
+        #print(json.dumps(chunk, indent=4, sort_keys=True))
+        chunkhull = {'docs':[]}
+        chunkhull['docs'] = chunk
+        answer = requests.post(pouchDB_url_bulk , auth=auth, json=chunkhull)
+        print(answer)
+    return print('Documents uploaded')
 
 def getListOfDBs():
     response = requests.get(pouchDB_url_alldbs, auth=auth)
@@ -88,9 +93,7 @@ def addModifiedEntry(doc):
 def saveChanges(doc, pouchDB_url_put, auth ):
     requests.put(pouchDB_url_put + doc['_id'], auth=auth, json=doc)
 
-def bulkSaveChanges(DOC, pouchDB_url_bulk, auth ):
-    answer = requests.post(pouchDB_url_bulk , auth=auth, json=DOC)
-    print(answer)
+
 
 def statOfRessouceTypes(result):
     dataset = sorted(result['docs'], key= lambda x: x['resource']['type'])
@@ -376,33 +379,80 @@ def handleduplicate(df, field):
         dfnew = dfnew.append(row)
     return dfnew
 
+def pathToStore(series):
+    series['figure_imagestorepath'] = os.path.join(series['imagestore'], series['exportProject'], str(series['figure_tmpid']) )
+    return series
+def imageToStore(series):
+    shutil.copyfile(str(series['figure_path']), series['figure_imagestorepath'])
+    return series
+def copytree(src, dst, symlinks=False, ignore=None):
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, symlinks, ignore)
+        else:
+            shutil.copy2(s, d)
+
+auth = ('', 'blub')
+db_url = 'http://host.docker.internal:3000'
+#db_name = 'shapes_import'
+#pouchDB_url_find = f'{db_url}/{db_name}/_find'
+#pouchDB_url_put = f'{db_url}/{db_name}/'
+#pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
+#pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
+pouchDB_url_alldbs = f'{db_url}/_all_dbs'
+imagestore = '/home/imagestore/'
+#exportProject = 'shapes_import'
 alldblist = getListOfDBs()
 shapesdblist = [db for db in alldblist if db.endswith('_ed')]
 print(alldblist)
-excludelist = ['hayes1972_ed','lattara6_ed','bonifay2004_ed']
-#selectlist = ['bonifay2004_ed']
+excludelist = ['ock_ed']
+selectlist = ['hayes1972_ed']
+targetdb = 'testshapes'
 shapesdblist = [db for db in shapesdblist if not db in excludelist ]
 ## for testing only one db ##
 #shapesdblist = [db for db in shapesdblist if db in selectlist ]
 print(shapesdblist)
 
+
 for db in shapesdblist:
     print(db)
     dbdocs = getAllDocs(db_name = db)
-    DFresources, docfields = DOCtoDF(dbdocs['docs'])
+    docs = dbdocs['docs']
+    docs = [doc for doc in docs if 'resource' in doc.keys() and not doc['resource']['id'] == 'project']
+    docs_noattach = []
+    for doc in docs:
+        remove_key = doc.pop('_attachments', None) 	
+        remove_key = doc.pop('_rev', None)
+        #remove_key = doc['resource'].pop('featureVectors', None)
+        if remove_key != None: 		
+            print("attachments has been removed for the {} shoe.".format(doc["_id"])) 
+            print(doc)	
+        else: 		
+            print("No key has been removed for the {} doc.".format(doc["_id"]))  
+            print(doc)
+        docs_noattach.append(doc)
+    copytree(os.path.join(imagestore, db), os.path.join(imagestore, 'idaishapes'), symlinks=False, ignore=None)
+    #shutil.copyfile(os.path.join(imagestore, db), os.path.join(imagestore, 'null'))
+    #docs = [doc for doc in docs if 'type' in doc['resource'].keys()]
+    #Drawings = [doc for doc in docs if doc['resource']['type']=='Drawing' ]
+    #DFresources, docfields = DOCtoDF(dbdocs['docs'])
 
-    DFnew = handleduplicate(DFresources, 'identifier')
+   #DFnew = handleduplicate(DFresources, 'identifier')
     
     
-    DFundup = DFnew[DFnew['identifier_undup']!=DFnew['identifier']]
-    print('Drawings',len(DFundup[DFundup['type']=='Drawing']))
-    print('Types',len(DFundup[DFundup['type']=='Type']))
+    #DFundup = DFnew[DFnew['identifier_undup']!=DFnew['identifier']]
+    #print('Drawings',len(docs[docs['type']=='Drawing']))
+    #print('Types',len(docs[docs['type']=='Type']))
     #print(DFundup[DFundup['type']=='Type'][['identifier','identifier_undup']])
-    DFundup['identifier'] = DFundup['identifier_undup']
-    DFundup = DFundup.drop(columns=['cumcount', 'groupsize', 'identifier_undup'])
-    DFundup = DFundup.apply(addModifiedEntry, axis=1)
-    DOCundup = DFtoDOC(DFundup, docfields)
+    #DFundup['identifier'] = DFundup['identifier_undup']
+    #DFundup = DFundup.drop(columns=['cumcount', 'groupsize', 'identifier_undup'])
+    #DFundup = DFundup.apply(addModifiedEntry, axis=1)
+    #DOCundup = DFtoDOC(DFundup, docfields)
+    docshull = {}
+    docshull['docs']=docs_noattach
 
-    #print(json.dumps(DOCundup['docs'], indent=4, sort_keys=True))
-    pouchDB_url_bulk = f'{db_url}/{db}/_bulk_docs'
-    bulkSaveChanges(DOCundup, pouchDB_url_bulk, auth)
+    #print(json.dumps(docshull['docs'], indent=4, sort_keys=True))
+    pouchDB_url_bulk = f'{db_url}/idaishapes/_bulk_docs'
+    bulkSaveChanges(docshull, pouchDB_url_bulk, auth)

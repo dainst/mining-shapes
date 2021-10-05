@@ -43,12 +43,13 @@ def computeFeaturevectors(db_name):
         raise ValueError('not valid descriptor type')
 
 pouchDB_url_alldbs = f'{db_url}/_all_dbs'
-alldbs = getListOfDBs()
-list = [item for item in alldbs if item.endswith('_ed')]
+alldbs = getListOfDBs()#
+selectlist = ['lattara6_edv2', 'sidikhrebish_ed', 'urukcatalogs_ed', 'sabratha_ed', 'tallzira_ed', 'hayes1972_edv2', 'bonifay2004_ed', 'simitthus_ed']
+list = [item for item in alldbs if item.endswith('_ed') or item.endswith('_edv2') ]
 list = [item for item in list if not item.endswith('ock_ed')]
 print(list)
 imagestore = '/home/imagestore/'
-for db_name in list:
+for db_name in selectlist:
     data_path = "/home/imagestore/" + db_name +'/'
     seg_path = "/home/images/SEGMENT_RESULTS/" + db_name +'/'
     #process_files(db_name)
