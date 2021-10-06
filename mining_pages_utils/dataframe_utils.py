@@ -50,7 +50,7 @@ def pdf_to_image(dataframe):
 
 
 def pdf_to_imagev2(series):
-    if(pd.notnull(series['pubpdf_path'])):
+    if 'expectImagesnotPdf' not in series.keys() and pd.notnull(series['pubpdf_path']) or not series['expectImagesnotPdf'] and pd.notnull(series['pubpdf_path']):
         pnglist = [file for file in os.listdir(series['pubfolder_path']) if file.endswith('.png')]
         print(pnglist)
         for pagetuple in series['select_pdfpages']:
@@ -110,16 +110,18 @@ def get_figid_labelmap_as_df(path_to_labels: str) -> pd.DataFrame:
 def provide_pdf_path(dataframe):
     pdflist = []
     for index, row in dataframe.iterrows():
-        for file in os.listdir(row['pubfolder_path']):
-            if file.endswith('.pdf'):
-                pdfs = row
-                pdfs['pubpdf_path'] = str(
-                    os.path.join(row['pubfolder_path'], file))
-                pdflist.append(pdfs.copy())
-                break
-        else:
-            nopdfs = row
-            pdflist.append(nopdfs.copy())
+        if not 'expectImagesnotPdf' in row.keys() or not row['expectImagesnotPdf']:
+            for file in os.listdir(row['pubfolder_path']):
+                if file.endswith('.pdf'):
+                    pdfs = row
+                    pdfs['pubpdf_path'] = str(
+                        os.path.join(row['pubfolder_path'], file))
+                    pdflist.append(pdfs.copy())
+        if 'expectImagesnotPdf' in row.keys() and row['expectImagesnotPdf']:
+            print('Expect no pdf in folder but images.')
+            pdflist.append(row.copy())
+
+
     return pd.DataFrame(pdflist)
 
 
@@ -133,7 +135,7 @@ def provide_pagelist(dataframe: pd.DataFrame) -> pd.DataFrame:
     pagelist = []
     for index, row in dataframe.iterrows():
 
-        if(pd.notnull(row['pubpdf_path'])):
+        if 'expectImagesnotPdf' not in row.keys() and pd.notnull(row['pubpdf_path']) or not row['expectImagesnotPdf'] and pd.notnull(row['pubpdf_path']):
             filelist = os.listdir(row['pubfolder_path'])
             reg = re.compile(os.path.basename(
                 row['pubpdf_path'])+'[0-9]*-[0-9]*\.png')
@@ -146,7 +148,8 @@ def provide_pagelist(dataframe: pd.DataFrame) -> pd.DataFrame:
 
                 pagelist.append(page.copy())
 
-        else:
+        if 'expectImagesnotPdf' in row.keys() and row['expectImagesnotPdf']:
+        
             for page_imgname in os.listdir(row['pubfolder_path']):
                 if page_imgname.endswith((".png", ".jpg")) and 'Thumbs' not in page_imgname:
                     page = row
@@ -158,11 +161,10 @@ def provide_pagelist(dataframe: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(pagelist)
 
 
-def extract_pdfid(series):
-    reg_pdfpageid = re.compile(os.path.basename(
-        series['pubpdf_path'])+'[0-9]*-([0-9]*)\.png')
-    series['page_pdfid'] = int(
-        re.search(reg_pdfpageid, series['page_imgname']).group(1))
+def extract_pdfid(series, readfield, writefield ):
+    reg_pdfpageid = re.compile(series['pdfid_regex'])
+    series[writefield] = int(
+        re.search(reg_pdfpageid, series[readfield]).group(1))
     return series
 
 
@@ -198,16 +200,21 @@ def unfold_pagedetections(df: pd.DataFrame) -> pd.DataFrame:
 def page_detections_toframe(df: pd.DataFrame) -> pd.DataFrame:
     all_detections = []
     for index, row in df.iterrows():
-        N = int(row['page_detections']['num_detections'])
-        for i in range(0, N):
-            detection = row
-            #detection.drop('detection_boxes', inplace=True)
-            detection['detection_boxes'] = row['page_detections']['detection_boxes'][i]
-            #detection.drop('detection_classes', inplace=True)
-            detection['detection_classes'] = row['page_detections']['detection_classes'][i]
-            #detection.drop('detection_scores', inplace=True)
-            detection['detection_scores'] = row['page_detections']['detection_scores'][i]
-            all_detections.append(detection.copy())
+        if not row['annotations']:
+            N = int(row['page_detections']['num_detections'])
+            for i in range(0, N):
+                detection = row
+                #detection.drop('detection_boxes', inplace=True)
+                detection['detection_boxes'] = row['page_detections']['detection_boxes'][i]
+                #detection.drop('detection_classes', inplace=True)
+                detection['detection_classes'] = row['page_detections']['detection_classes'][i]
+                #detection.drop('detection_scores', inplace=True)
+                detection['detection_scores'] = row['page_detections']['detection_scores'][i]
+                all_detections.append(detection.copy())
+        if row['annotations']:
+            for i in row['annotations']:
+                detection = row
+                print(i, type(i))
 
     return pd.DataFrame(all_detections)
 
@@ -280,6 +287,8 @@ def filter_best_vesselprofile_detections(all_detections: pd.DataFrame, lowest_sc
     """
     bestdetections = pd.DataFrame()
     for index, row in all_detections.iterrows():
+        print(row['detection_scores'], row['detection_classesname'] )
+    
         if row['detection_classesname'] in row['allowedFigureDetections'] + row['allowedFrameDetections']  and row['detection_scores'] >= lowest_score:
             bestdetections = bestdetections.append(row)
     return bestdetections

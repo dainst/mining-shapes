@@ -3,6 +3,8 @@ import os
 import pandas as pd
 import json
 import numpy as np
+from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from itertools import groupby
 import pybtex
@@ -15,14 +17,24 @@ iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
 
 
 
+def getListOfDBs():
+    response = requests.get(pouchDB_url_alldbs, auth=auth)
+    result = json.loads(response.text)
+    return result
+
 def getZenonBibtex(series):
     exporturl = 'https://zenon.dainst.org/Record/' + series['pub_value'] + '/Export?style='
     exportstyle ='BibTeX'
     result = requests.get(exporturl + exportstyle)
     print(result.text)
     parse_string
-    
+    pybtex.errors.set_strict_mode(False)
     data = parse_string(result.text, 'bibtex')
+    datadict = vars(data.entries[str(series['pub_value'])].fields)
+    if not 'publisher' in datadict['_dict'].keys():
+        data.entries[str(series['pub_value'])].fields['publisher'] = 'unknown'
+    if not 'journal' in datadict['_dict'].keys():
+        data.entries[str(series['pub_value'])].fields['journal'] = 'unknown'
     del data.entries[str(series['pub_value'])].fields['crossref']
     #list(data.entry.fields.keys())
     bib_data = data.to_string('bibtex')

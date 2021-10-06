@@ -28,10 +28,10 @@ class ResnetFeatureVectors:
         return cv.cvtColor(cv.imread(path, cv.IMREAD_COLOR), cv.COLOR_BGR2RGB)
 
     def __len__(self):
-        return len(glob.glob(f"{self._images_path}/*.jpg"))
+        return len(glob.glob(f"{self._images_path}/*.png"))
 
     def __iter__(self) -> FeatureEntry:
-        for img_path in glob.glob(f"{self._images_path}/*.jpg"):
+        for img_path in glob.glob(f"{self._images_path}/*.png"):
             img = cv.resize(self._read_img_rgb(img_path), self._image_size)
             resource_id = self._resourceId_from_file(img_path)
             feature_vec = self._model.predict(

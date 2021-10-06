@@ -37,35 +37,49 @@ def double_to_singlepage(dataframe):
     #dataframe['figid_clean'] = dataframe['figid_raw']
 
 
-def cut_image(dataframe: pd.DataFrame) -> np.ndarray:
+def cut_image(row):
     """
     @brief Select an ROI from image
     @param dataframe dataframe with image and ROI metadata
     """
-    page_imgnp = cv2.imread(dataframe['page_path'])
-    box = dataframe['detection_boxes']
+    page_imgnp = cv2.imread(row['page_path'])
+    #print(page_imgnp.shape)
+    box = row['detection_boxes']
     ymin, xmin, ymax, xmax = box
-    bbox_xmin = int((xmin)*dataframe['page_width'])
-    bbox_ymin = int((ymin)*dataframe['page_height'])
-    bbox_xmax = int((xmax)*dataframe['page_width'])
-    bbox_ymax = int((ymax)*dataframe['page_height'])
+    if not row['annotations'] or 'annotations' not in row.keys():
+        bbox_xmin = int((xmin)*row['page_width'])
+        bbox_ymin = int((ymin)*row['page_height'])
+        bbox_xmax = int((xmax)*row['page_width'])
+        bbox_ymax = int((ymax)*row['page_height'])
+    if 'annotations' in row.keys() and row['annotations']:
+        bbox_xmin = int(xmin)
+        bbox_ymin = int(ymin)
+        bbox_xmax = int(xmax)
+        bbox_ymax = int(ymax)
     bbox_np = page_imgnp[bbox_ymin:bbox_ymax, bbox_xmin:bbox_xmax]
+    
 
     return bbox_np
 
 
-def cut_image_savetemp(dataframe: pd.DataFrame, outpath_base: str) -> pd.DataFrame:
+def cut_image_savetemp(row, outpath_base: str) -> pd.DataFrame:
     """
     @brief Select an ROI from image and writes detected vesselprofile to disk
     @param dataframe dataframe with image and ROI metadata
     """
-    page_imgnp = cv2.imread(dataframe['page_path'])
-    box = dataframe['detection_boxes']
+    page_imgnp = cv2.imread(row['page_path'])
+    box = row['detection_boxes']
     ymin, xmin, ymax, xmax = box
-    bbox_xmin = int((xmin)*dataframe['page_width'])
-    bbox_ymin = int((ymin)*dataframe['page_height'])
-    bbox_xmax = int((xmax)*dataframe['page_width'])
-    bbox_ymax = int((ymax)*dataframe['page_height'])
+    if not row['annotations'] or 'annotations' not in row.keys():
+        bbox_xmin = int((xmin)*row['page_width'])
+        bbox_ymin = int((ymin)*row['page_height'])
+        bbox_xmax = int((xmax)*row['page_width'])
+        bbox_ymax = int((ymax)*row['page_height'])
+    if 'annotations' in row.keys() and row['annotations']:
+        bbox_xmin = int(xmin)
+        bbox_ymin = int(ymin)
+        bbox_xmax = int(xmax)
+        bbox_ymax = int(ymax)
     figure_imgnp = page_imgnp[bbox_ymin:bbox_ymax, bbox_xmin:bbox_xmax]
     del page_imgnp
     figure_height, figure_width, figure_channel = figure_imgnp.shape
@@ -105,6 +119,7 @@ def load_page(row):
     page_imgnp = cv2.imread(str(row['page_path']))
     print(str(row['page_path']))
     assert len(page_imgnp.shape) == 3
+    print(page_imgnp.shape)
     page_height, page_width, page_channel = page_imgnp.shape
     row['page_width'] = page_width
     row['page_height'] = page_height
@@ -196,8 +211,6 @@ def ocr_post_processing_pageid(row):
     result = re.search(pageid_regex, pageid_raw)
     if result:
         row['pageid_clean'] = result.group(1)
-    else:
-        row['pageid_clean'] = 'none'
 
     return row
 
