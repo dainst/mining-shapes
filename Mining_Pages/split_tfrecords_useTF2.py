@@ -5,6 +5,8 @@ import zipfile
 import shutil
 import random
 
+from tensorflow.python.data.ops.dataset_ops import DatasetSpec
+
 DIR = "E:/Traindata/Trainingdata_fromCVAT/profile_segmentation/"
 
 TRAIN_PART = 0.7
@@ -41,6 +43,12 @@ def unzip_tfrecords(path):
                 i = i + 1
     return listoftfrecordfiles
 
+def importAsDataset(path):
+    for batch in tf.data.TFRecordDataset(path).map(decode_fn):
+        print(batch)
+    
+
+
 
 def converttolist(path):
     records = []
@@ -72,16 +80,55 @@ def writetrainandtest(train,test, i):
     test_writer.flush()
     train_writer.flush()
 
-listoftfrecordfiles = unzip_tfrecords(DIR)
-print(listoftfrecordfiles)
-trains = []
-tests = []
-for tfrecords in listoftfrecordfiles:
-    record=converttolist(tfrecords['tfrpath'])
-    train,test=traintestsplit(record)
-    trains.extend(train)
-    tests.extend(test)
-writetrainandtest(trains,tests, 'settest')
+def decode_fn(record_bytes):
+    features = {
+    # Extract features using the keys set during creation
+    "image/class/label":    tf.io.FixedLenFeature([], tf.int64),
+    "image/encoded":        tf.io.VarLenFeature(tf.string),
+    }
+    return tf.io.parse_single_example(record_bytes, features)
+
+
+def get_dataset_partitions_tf(ds, ds_size, train_split=0.8, val_split=0.1, test_split=0.1, shuffle=True, shuffle_size=10000):
+    assert (train_split + test_split + val_split) == 1
+    
+    if shuffle:
+        # Specify seed to always have the same split distribution between runs
+        ds = ds.shuffle(shuffle_size, seed=12)
+    
+    train_size = int(train_split * ds_size)
+    val_size = int(val_split * ds_size)
+    
+    train_ds = ds.take(train_size)    
+    val_ds = ds.skip(train_size).take(val_size)
+    test_ds = ds.skip(train_size).skip(val_size)
+    
+    return train_ds, val_ds, test_ds
+
+def extract_fn(data_record):
+    features = {
+        # Extract features using the keys set during creation
+        "image/class/label":    tf.FixedLenFeature([], tf.int64),
+        "image/encoded":        tf.VarLenFeature(tf.string),
+    }
+    sample = tf.parse_single_example(data_record, features)
+    label = sample['image/class/label']
+    dense = tf.sparse_tensor_to_dense(sample['image/encoded'])
+
+    # Comment it if you got an error and inspect just dense:
+    image = tf.image.decode_image(dense, dtype=tf.float32) 
+
+    return dense, image, label
+
+dataset = importAsDataset("E:/Traindata/Trainingdata_fromCVAT/profile_segmentation/1default.tfrecord")
+#print(dataset)
+#decoded = decode_fn(dataset)
+#dataset_length = [i for i,_ in enumerate(decoded)][-1] + 1
+#print(dataset_length)   
+#train,test=traintestsplit(record)
+    #trains.extend(train)
+    #tests.extend(test)
+#writetrainandtest(trains,tests, 'settest')
 
                
 

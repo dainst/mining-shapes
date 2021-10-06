@@ -18,7 +18,7 @@ import shutil
 #from sklearn.model_selection import train_test_split
 #print(tf.version.VERSION)
 
-DIR = Path("E:/Traindata/Trainingdata_fromCVAT/mining_figures/")
+DIR = Path("E:/Traindata/Trainingdata_fromCVAT/profile_segmentation/")
 
 TRAIN_PART = 0.7
 
@@ -55,6 +55,7 @@ def unzip_tfrecords(path):
                             target = open(tfrecordfiles['pbtxtpath'], "wb")
                             with source, target:
                                 shutil.copyfileobj(source, target)
+                print(tfrecordfiles)
                 listoftfrecordfiles.append(tfrecordfiles)
                 #zip_ref.extractall(DIR)
                 i = i + 1
@@ -108,7 +109,7 @@ def extract_fn(data_record):
     image = tf.image.decode_image(dense, dtype=tf.float32) 
 
     return dense, image, label
-def correctionsMiningPages(listoftrainsets,listoftestsets,listofvalsets):
+def correctionsMiningPages(listoftrainsets,listoftestsets, listofvalsets):
     merger = IntersectMerge()
     merged_trainset = merger(listoftrainsets)
     del listoftrainsets
@@ -119,32 +120,31 @@ def correctionsMiningPages(listoftrainsets,listoftestsets,listofvalsets):
     print(merged_trainset.categories())
     print(len(merged_trainset))
     merged_trainset.export(trainset_path, 'tf_detection_api', save_images=True)
+    
     merged_testset = merger(listoftestsets)
     del listoftestsets
-
-    merged_testset = merged_testset.transform('remap_labels', {'stampbox': 'infoframe' }, default='keep')
-    
+    merged_testset = merged_testset.transform('remap_labels', {'stampbox': 'infoframe' }, default='keep')  
     merged_testset = merged_testset.transform('remap_labels', {'pageid': 'figureid' }, default='keep')
     testset_path = os.path.join(DIR, 'testset.tfrecord')
     print('testset')
     print(merged_testset.categories())
     print(len(merged_testset))
     merged_testset.export(testset_path, 'tf_detection_api', save_images=True)
+
     merged_valset = merger(listofvalsets)
     del listofvalsets
-
-    merged_valset = merged_valset.transform('remap_labels', {'stampbox': 'infoframe' }, default='keep')
+    merged_valset = merged_valset.transform('remap_labels', {'stampbox': 'infoframe' }, default='keep')  
     merged_valset = merged_valset.transform('remap_labels', {'pageid': 'figureid' }, default='keep')
     valset_path = os.path.join(DIR, 'valset.tfrecord')
     print('valset')
     print(merged_valset.categories())
     print(len(merged_valset))
-    merged_valset.export(valset_path, 'tf_detection_api', save_images=True)
+    merged_valset.export(valset_path, 'tf_detection_api', save_images=True)  
 
 def splitEachRecord(listoftfrecordfiles):
     listoftrainsets = []
     listoftestsets = []
-    listofvalsets = []
+    listofvalsets=[]
     for record in listoftfrecordfiles:
         print(record['name'])
         
@@ -169,7 +169,7 @@ def splitEachRecord(listoftfrecordfiles):
         if 'task_zenonid_001344933_and_zenonid_001346932-2020_11_12_14_13_46-tfrecord 1.0' in record['name']:
             dataset = dataset.transform('remap_labels', {'stampfigure':'stampfigure','vesselprofilefigure': 'vesselprofilefigure', 'pageid':'pageid', 'pageinfo':'pageinfo', 'vesselimage':'vesselimage' }, default='delete')
 
-        splitted = transforms.RandomSplit(dataset, splits=[('train', 0.60), ('test', 0.15), ('val', 0.25)])
+        splitted = transforms.RandomSplit(dataset, splits=[('train', 0.75), ('test', 0.15), ('val', 0.10)])
         train = splitted.get_subset('train')
         trainset = Dataset.from_extractors(train)
         test = splitted.get_subset('test')
@@ -181,14 +181,16 @@ def splitEachRecord(listoftfrecordfiles):
         listoftestsets.append(testset)
         listofvalsets.append(valset)
 
-    return listoftrainsets,listoftestsets,listofvalsets
+    print(len(listofvalsets[0]))
+    return listoftrainsets,listoftestsets, listofvalsets
 
 
 listoftfrecordfiles = unzip_tfrecords(DIR)
+print(listoftfrecordfiles)
 
-listoftrainsets,listoftestsets,listofvalsets = splitEachRecord(listoftfrecordfiles)
+listoftrainsets,listoftestsets, listofvalsets = splitEachRecord(listoftfrecordfiles)
 print(listoftestsets)
-correctionsMiningPages(listoftrainsets,listoftestsets,listofvalsets)
+correctionsMiningPages(listoftrainsets,listoftestsets, listofvalsets)
 
 # load a Datumaro project
 #project = Project.load('E:/Traindata/Trainingdata_fromCVAT/mining_pages/datumaroproject')

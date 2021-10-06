@@ -1,13 +1,15 @@
 
-#import tensorflow as tf
+import tensorflow as tf
 import os
 from pathlib import Path
 import datetime
+import pandas as pd
 import numpy as np
 #import Keras
 #from datumaro.components.project import Project
 from datumaro.components.dataset import Dataset
 import datumaro.plugins.transforms as transforms
+from datumaro.components.project import Environment, Project
 from datumaro.components.operations import merge_categories, MergingStrategy
 from datumaro.components.operations import IntersectMerge
 from datumaro.components.extractor import (Importer, Extractor, Transform, DatasetItem, Bbox, AnnotationType, Label,
@@ -18,44 +20,27 @@ import shutil
 #from sklearn.model_selection import train_test_split
 #print(tf.version.VERSION)
 
-DIR = Path("E:/Traindata/Trainingdata_fromCVAT/profile_segmentation/")
-
+DIR = "E:/Traindata/Trainingdata_fromCVAT/mining_pages"
 TRAIN_PART = 0.7
 
+def provide_recorddf(path) -> pd.DataFrame:
+    list_of_files = []
+    for (dirpath, dirnames, filenames) in os.walk(path):
+        for filename in filenames:
+            row = {}
+            if filename in ['test.tfrecord', 'val.tfrecord', 'train.tfrecord']:
+                row['filename'] = filename
+                row['filepath'] = os.path.join(dirpath, filename)
+                list_of_files.append(row)
+                print(row)
+    return pd.DataFrame(list_of_files)
 
 def unzip_tfrecords(path):
     i = 1
     listoftfrecordfiles = []
     for file in os.listdir(path):
         if file.endswith('.zip'):
-            unzippedfolder = Path(os.path.join(path,str(file).replace('.zip','')))
-            if not unzippedfolder.exists():
-                os.mkdir(os.path.join(path,str(file).replace('.zip','')))
-            with zipfile.ZipFile(os.path.join(DIR,file), 'r') as zip_ref:
-                zipinfos = zip_ref.infolist()
-                tfrecordfiles = {}
-                for zipinfo in zipinfos:
-                    # This will do the renaming
-                    #print(zipinfo.filename)
-                    #zipinfo.filename = str(i) + str(zipinfo.filename)
-                    print(zipinfo)
-                    if str(zipinfo.filename).endswith('.tfrecord'):
-                        tfrecordfiles['tfrpath'] = os.path.join(unzippedfolder,zipinfo.filename)
-                        tfrecordfiles['name'] = file
-                        source = zip_ref.open(zipinfo.filename)
-                        if not Path(tfrecordfiles['tfrpath']).exists():
-                            target = open(tfrecordfiles['tfrpath'], "wb")
-                            with source, target:
-                                shutil.copyfileobj(source, target)
-                    if str(zipinfo.filename).endswith('.pbtxt'):
-                        #tfrecordfiles['id'] = i
-                        tfrecordfiles['pbtxtpath'] = os.path.join(unzippedfolder,zipinfo.filename)
-                        if not Path(tfrecordfiles['pbtxtpath']).exists():
-                            source = zip_ref.open(zipinfo.filename)
-                            target = open(tfrecordfiles['pbtxtpath'], "wb")
-                            with source, target:
-                                shutil.copyfileobj(source, target)
-                print(tfrecordfiles)
+
                 listoftfrecordfiles.append(tfrecordfiles)
                 #zip_ref.extractall(DIR)
                 i = i + 1
@@ -109,7 +94,7 @@ def extract_fn(data_record):
     image = tf.image.decode_image(dense, dtype=tf.float32) 
 
     return dense, image, label
-def correctionsMiningPages(listoftrainsets,listoftestsets):
+def correctionsMiningPages(listoftrainsets,listoftestsets,listofvalsets):
     merger = IntersectMerge()
     merged_trainset = merger(listoftrainsets)
     del listoftrainsets
@@ -131,11 +116,21 @@ def correctionsMiningPages(listoftrainsets,listoftestsets):
     print(merged_testset.categories())
     print(len(merged_testset))
     merged_testset.export(testset_path, 'tf_detection_api', save_images=True)
-    
+    merged_valset = merger(listofvalsets)
+    del listofvalsets
+
+    merged_valset = merged_valset.transform('remap_labels', {'stampbox': 'infoframe' }, default='keep')
+    merged_valset = merged_valset.transform('remap_labels', {'pageid': 'figureid' }, default='keep')
+    valset_path = os.path.join(DIR, 'valset.tfrecord')
+    print('valset')
+    print(merged_valset.categories())
+    print(len(merged_valset))
+    merged_valset.export(valset_path, 'tf_detection_api', save_images=True)
 
 def splitEachRecord(listoftfrecordfiles):
     listoftrainsets = []
     listoftestsets = []
+    listofvalsets = []
     for record in listoftfrecordfiles:
         print(record['name'])
         
@@ -160,27 +155,41 @@ def splitEachRecord(listoftfrecordfiles):
         if 'task_zenonid_001344933_and_zenonid_001346932-2020_11_12_14_13_46-tfrecord 1.0' in record['name']:
             dataset = dataset.transform('remap_labels', {'stampfigure':'stampfigure','vesselprofilefigure': 'vesselprofilefigure', 'pageid':'pageid', 'pageinfo':'pageinfo', 'vesselimage':'vesselimage' }, default='delete')
 
-        splitted = transforms.RandomSplit(dataset, splits=[('train', 0.75), ('test', 0.15), ('val', 0.10)])
+        splitted = transforms.RandomSplit(dataset, splits=[('train', 0.60), ('test', 0.15), ('val', 0.25)])
         train = splitted.get_subset('train')
         trainset = Dataset.from_extractors(train)
         test = splitted.get_subset('test')
         testset = Dataset.from_extractors(test)
-
+        val = splitted.get_subset('val')
+        valset = Dataset.from_extractors(val)
         #train, test = splitter
         listoftrainsets.append(trainset)
         listoftestsets.append(testset)
+        listofvalsets.append(valset)
 
+    return listoftrainsets,listoftestsets,listofvalsets
 
-    return listoftrainsets,listoftestsets
+listofrecords = provide_recorddf(DIR) 
+print(listofrecords.iloc[0]['filepath'])
+onimageList = []
+annotationList = []
+for index,record in listofrecords.iterrows():
+    dataset= Dataset.import_from(record['filepath'], 'tf_detection_api')
+    for data in dataset:
+        dict = vars(data)
+        onimageList.append(dict)
+        for anno in dict['annotations']:
+            annoplus = vars(anno)
+            annoplus['page']=dict['id']
+            annotationList.append(annoplus)
 
-
-listoftfrecordfiles = unzip_tfrecords(DIR)
-print(listoftfrecordfiles)
-
-listoftrainsets,listoftestsets = splitEachRecord(listoftfrecordfiles)
-print(listoftestsets)
-correctionsMiningPages(listoftrainsets,listoftestsets)
-
+annotationDF = pd.DataFrame(annotationList)
+#print(len(annotationDF.groupby('label')))
+#print(annotationDF.iloc[10])
+for name,group in annotationDF.groupby('label'):
+    print(name, len(group))
+    #print(record['filepath'], len(dataset))
+#dataset = Environment().make_importer('E:/Traindata/Trainingdata_fromCVAT/mining_figures/Bonifay2004quick/testset.tfrecord').make_dataset()
 # load a Datumaro project
 #project = Project.load('E:/Traindata/Trainingdata_fromCVAT/mining_pages/datumaroproject')
 
