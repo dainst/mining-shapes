@@ -17,8 +17,8 @@ iteritems = lambda mapping: getattr(mapping, 'iteritems', mapping.items)()
 
 
 
-def getListOfDBs():
-    response = requests.get(pouchDB_url_alldbs, auth=auth)
+def getListOfDBs(db_url, auth):
+    response = requests.get(f'{db_url}/_all_dbs', auth=auth)
     result = json.loads(response.text)
     return result
 

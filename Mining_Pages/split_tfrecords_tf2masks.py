@@ -18,7 +18,7 @@ import shutil
 #from sklearn.model_selection import train_test_split
 #print(tf.version.VERSION)
 
-DIR = Path("E:/Traindata/Trainingdata_fromCVAT/mining_figures/")
+DIR = Path("E:/Traindata/Trainingdata_fromCVAT/profile_segmentation/dataset")
 
 
 TRAIN_PART = 0.7
@@ -120,7 +120,8 @@ def correctionsMiningPages(listoftrainsets,listoftestsets, listofvalsets):
     print('trainset')
     print(merged_trainset.categories())
     print(len(merged_trainset))
-    merged_trainset.export(trainset_path, 'tf_detection_api', save_images=True)
+    merged_trainset.transform('polygons_to_masks')
+    merged_trainset.export(trainset_path, 'tf_detection_api', save_images=True,  save_masks=True)
     
     merged_testset = merger(listoftestsets)
     del listoftestsets
@@ -130,7 +131,8 @@ def correctionsMiningPages(listoftrainsets,listoftestsets, listofvalsets):
     print('testset')
     print(merged_testset.categories())
     print(len(merged_testset))
-    merged_testset.export(testset_path, 'tf_detection_api', save_images=True)
+    merged_testset.transform('polygons_to_masks')
+    merged_testset.export(testset_path, 'tf_detection_api', save_images=True,  save_masks=True)
 
     merged_valset = merger(listofvalsets)
     del listofvalsets
@@ -140,7 +142,8 @@ def correctionsMiningPages(listoftrainsets,listoftestsets, listofvalsets):
     print('valset')
     print(merged_valset.categories())
     print(len(merged_valset))
-    merged_valset.export(valset_path, 'tf_detection_api', save_images=True)  
+    #merged_valset.transform('polygons_to_masks')
+    merged_valset.export(valset_path, 'tf_detection_api', save_images=True, save_masks=True)  
 
 def splitEachRecord(listoftfrecordfiles):
     listoftrainsets = []
@@ -149,8 +152,11 @@ def splitEachRecord(listoftfrecordfiles):
     for record in listoftfrecordfiles:
         print(record['name'])
         
-        
-        dataset= Dataset.import_from(record['tfrpath'], 'tf_detection_api')
+        dataset= Dataset.import_from(record['tfrpath'], 'datumaro')
+        dataset.transform('polygons_to_masks')
+        for item in dataset:
+            print(item.annotations)
+
         #cleanset = dataset.select(lambda item: len(item.annotations) <= 2)
         #for item in cleanset:
             #print(item.annotations)
@@ -184,10 +190,12 @@ def splitEachRecord(listoftfrecordfiles):
 
     
     return listoftrainsets,listoftestsets, listofvalsets
+listoftfrecordfiles=[]
+record ={}
+record['tfrpath']="E:/Traindata/Trainingdata_fromCVAT/profile_segmentation/dataset/annotations/default.json"
+record['name'] = 'mkhimsegments'
+listoftfrecordfiles.append(record)
 
-
-listoftfrecordfiles = unzip_tfrecords(DIR)
-print(listoftfrecordfiles)
 
 listoftrainsets,listoftestsets, listofvalsets = splitEachRecord(listoftfrecordfiles)
 print(len(listofvalsets[0]), 'this is val')

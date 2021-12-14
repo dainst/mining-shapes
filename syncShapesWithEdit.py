@@ -465,7 +465,7 @@ def newdocsCreate(db, targetdb, newdocs_create):
 
 
 auth = ('', 'blub')
-db_url = 'http://host.docker.internal:3000'
+db_url = 'http://localhost:3000'
 #db_name = 'shapes_import'
 #pouchDB_url_find = f'{db_url}/{db_name}/_find'
 #pouchDB_url_put = f'{db_url}/{db_name}/'

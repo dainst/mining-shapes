@@ -15,13 +15,13 @@ from shutil import copyfile
 from pathlib import Path
 from typing import Tuple, List
 from object_detection.utils import dataset_util, ops
-import segmentation_models as sm
+#import segmentation_models as sm
 
 
 
 # pylint: disable=import-error
 sys.path.append(os.path.abspath('/home/Code/Normalize_Shape'))
-from point_detector import PointDetector  # noqa: E402
+#from point_detector import PointDetector  # noqa: E402
 
 
 def split(df, group):
@@ -70,6 +70,7 @@ def build_detectfn(path):
 
     # Load saved model and build the detection function
     miningpagedetect = tf.saved_model.load(path)
+    #model = tf.saved_model.load(str(model_dir))
 
     end_time = time.time()
     elapsed_time = end_time - start_time
@@ -303,6 +304,64 @@ def readNoextensionImage(file):
 
     
     return image
+
+
+def run_vesselprofile_segmentation_tf(vesselpath: str,
+                                   segmentpath: str,
+                                   modelpath: str,
+                                   img_size: Tuple[int, int] = (512, 512),
+                                   mark_black_img: bool = False,
+                                   resize_img: bool = True) -> None:
+    """
+    @brief performs segmentation of vesselprofile images
+    @param vesselpath directory of vesselprofile images
+    @param path to store segmented images
+    @param modelpath location of saved model weights. Weights should be stored in .h5 format
+    @param mark_black_img append black_ to image name if segmented image is all black
+    @param resize_img resize image back to its original shape after segmentation
+    """
+    
+
+    sm.set_framework('tf.keras')
+
+    sm.framework()
+    vessel_image_list = os.listdir(vesselpath)
+    #print(vessel_image_list)
+
+    # load pretrained model
+    seg_model = load_segmentation_model(modelpath)
+
+    # predict segmentations and store to segmentpath
+    prog_bar = tqdm(total=len(vessel_image_list)-1)
+
+    #for img_name in [i for i in vessel_image_list if i.endswith('.jpg') or i.endswith('.png')]:
+    for img_name in [i for i in vessel_image_list ]:
+        #imagepath = tempExtension(os.path.join(vesselpath, img_name), 'png', '/home/SEGMENTATION/')
+
+        #image = cv2.imread(imagepath, cv2.IMREAD_COLOR)
+        image = readNoextensionImage(os.path.join(vesselpath, img_name))
+
+        height_orig, width_orig, *_ = image.shape
+        image = cv2.resize(image, img_size)
+        seg_img = seg_model.predict(image[np.newaxis, ...])
+        seg_img = (np.argmax(seg_img[0], axis=2) * 255).astype(np.uint8)
+
+        if is_img_black(seg_img):
+            save_path = os.path.join(
+                segmentpath, f"black_{img_name}.png" if mark_black_img else f"{img_name}.png")
+        else:
+            seg_img = postprocess_image(seg_img, img_size, image.shape[:2],)
+            save_path = os.path.join(segmentpath, img_name + '.png')
+
+        if resize_img:
+            cv2.imwrite(save_path, cv2.resize(
+                seg_img, (width_orig, height_orig)))
+        else:
+            cv2.imwrite(save_path, seg_img)
+
+        prog_bar.update(1)
+    prog_bar.close()
+
 
 
 def run_vesselprofile_segmentation(vesselpath: str,
