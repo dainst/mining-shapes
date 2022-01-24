@@ -11,27 +11,21 @@ from math import isnan
 import itertools
 from decimal import Decimal  
 #from decimal import Decimal  
-auth = ('', 'blub')
-db_url = 'http://host.docker.internal:3000'
-db_name = 'shapes_import'
-pouchDB_url_find = f'{db_url}/{db_name}/_find'
-pouchDB_url_put = f'{db_url}/{db_name}/'
-pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
-pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
-imagestore = '/home/imagestore/'
-exportProject = 'shapes_import'
-FIG_SIZE = [20,30]
 
 
-def getAllDocs():
-    querydict={'selector':{}}
-    querydict['selector']['_id'] = {'$gt': None}
-    response = requests.post(pouchDB_url_find, auth=auth, json=querydict)
+
+def getAllDocsv2(db_name):
+    pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
+    response = requests.post(pouchDB_url_all, auth=auth)
     result = json.loads(response.text)
     return result
 
-def getAllDocsv2():
-    response = requests.post(pouchDB_url_all, auth=auth)
+
+def getAllDocs(db_name):
+    pouchDB_url_find = f'{db_url}/{db_name}/_find'
+    querydict={'selector':{}}
+    querydict['selector']['_id'] = {'$gt': None}
+    response = requests.post(pouchDB_url_find, auth=auth, json=querydict)
     result = json.loads(response.text)
     return result
 
@@ -177,7 +171,8 @@ def DFtoDOC(DFresources, docfields):
         #print('Before DROP:')  
         cleanrow=row[columns].dropna() 
         #äprint(cleanrow)
-        row['resource']= cleanrow.to_dict()
+        if not cleanrow.empty:
+            row['resource']= cleanrow.to_dict()
         #row['resource'] = {k: row['resource'][k] for k in row['resource'] if not isnan(row['resource'][k])}
         #print(row)
         #print('After DROP:')
@@ -198,61 +193,128 @@ def addModifiedEntry(doc):
     sec = "{:.3f}".format(Decimal(now.strftime('.%f')))
     entry['date'] = daytoSec + str(sec)[1:] + 'Z'
     #print(entry)
-    doc['modified']=[]
+    if not 'modified' in doc.keys():
+        doc['modified']=[]
     doc['modified'].append(entry)
+
+    
     #print(doc['modified'])
     return doc
 
 
+auth = ('', 'blub')
+db_url = 'http://host.docker.internal:3000'
+db_name = 'urukcatalogs_ed'
+pouchDB_url_find = f'{db_url}/{db_name}/_find'
+pouchDB_url_put = f'{db_url}/{db_name}/'
+pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
+pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
+imagestore = '/home/imagestore/'
+FIG_SIZE = [20,30]
+auth = ('', 'blub')
+db_url = 'http://host.docker.internal:3000'
+#db_name = 'shapes_import'
+#pouchDB_url_find = f'{db_url}/{db_name}/_find'
+#pouchDB_url_put = f'{db_url}/{db_name}/'
+#pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
+#pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
+pouchDB_url_alldbs = f'{db_url}/_all_dbs'
+imagestore = '/home/imagestore/'
+#exportProject = 'shapes_import'
+
+selectlist = ['hayes1972_edv2']
+targetdb = 'idaishapes'
+
+## for testing only one db ##
+#shapesdblist = [db for db in shapesdblist if db in selectlist ]
+
+
+for db in selectlist:    
+    result = getAllDocs(db)
+    print(db)
+    print('AllDocs: ', len(result['docs']))
+    #listOfIncludedTypes = ['Type']
+    allTypes = selectOfResourceTypes(['Type'], result['docs'])
+    allDrawing = selectOfResourceTypes(['Drawing'], result['docs'])
+    #print('Drawings: ', len(Drawings) )
+    #listOfIncludedTypes = ['Type', 'TypeCatalog']
+    #TypesandCatalogs = selectOfResourceTypes(['Type', 'TypeCatalog'], result['docs'])
+    print('allTypes: ', len(allTypes) )
+    print('allDrawing: ', len(allDrawing) )
+    #print('ORIGINAL RESOURCE')
+    #print(allTypes[0])
+    DFresourcesTypes, docfieldsTypes = DOCtoDF(allTypes)
+    DFresourcesDrawing, docfieldsDrawing = DOCtoDF(allDrawing)
+    superflousTypes = pd.DataFrame()
+    ImageswithoutTypes = pd.DataFrame()
+    def replaceInDF(series):
+        series['identifier'] = series['identifier'].replace('_',' ')
+        return series
+    def descToType (series):
+        if ':' in series['shortDescription']:
+            splitList = series['shortDescription'].split(':')
+            material = splitList[0].replace(':','')
+            splitList = splitList[1].split(' ')
+            Form = splitList[2]
+            series['identifier'] = material + ' Form ' + Form
+            
+        return series
+
     
-result = getAllDocs()
-print('AllDocs: ', len(result['docs']))
-listOfIncludedTypes = ['Drawing']
-Drawings = selectOfResourceTypes(['Drawing'], result['docs'])
-print('Drawings: ', len(Drawings) )
-listOfIncludedTypes = ['Type', 'TypeCatalog']
-TypesandCatalogs = selectOfResourceTypes(['Type', 'TypeCatalog'], result['docs'])
-print('TypesandCatalogs: ', len(TypesandCatalogs) )
-#print('ORIGINAL RESOURCE')
-print(TypesandCatalogs[0])
-DFresources, docfields = DOCtoDF(Drawings)
-#print(TypesandCatalogs['resources']['relations']['isDepictedIn'])
+    pd.set_option("display.max_rows", None, "display.max_columns", None)
+    ##Rename identifier according to short Description
+    DFresourcesTypesHand = DFresourcesTypes[~DFresourcesTypes['shortDescription'].str.startswith('Page:')].apply(descToType, axis=1)
+    print('This is the Types without Page in shortDes', len(DFresourcesTypesHand))
+    DFresourcesTypesHand = DFresourcesTypesHand.apply(replaceInDF, axis=1)
+    Rest = DFresourcesTypes[DFresourcesTypes['shortDescription'].str.startswith('Page:')]
+    hayesRest = Rest[Rest['identifier'].str.startswith('Hayes')]
+    notRest = Rest[~Rest['identifier'].str.startswith('Hayes')]
+    print('starts with Page and not with Hayes', notRest )
+    ##Groupby identifier aggregate all 'isDepictedIn' Drawings
+    survivorTypes = pd.DataFrame() 
+    toBedeleted = pd.DataFrame() 
+    for name, group in DFresourcesTypesHand.groupby('identifier'):
+        relativesList = []
+        survivorOfGroup = group.iloc[0]
+        restOfGroup = group.iloc[1: , :]
+        for index, row in group.iterrows():
+            if 'isDepictedIn' in row['relations'].keys():
+                relativesList = relativesList + [i for i in row['relations']['isDepictedIn']]
+        survivorOfGroup['relations']['isDepictedIn'] = relativesList
+        survivorTypes = survivorTypes.append(survivorOfGroup)
+        toBedeleted = pd.concat([toBedeleted, restOfGroup])
+    
+    toBedeleted = pd.concat([toBedeleted, hayesRest])
+    pd.set_option("display.max_rows", None, "display.max_columns", None)
+    print('To be deletend: ', len(toBedeleted))
+    print('Survivors:', survivorTypes['identifier'])
+    
+    toBedeleted['_deleted'] = True
+    print(type(toBedeleted))
+    docfieldsTypes = docfieldsTypes.append(pd.Index(['_deleted']))
+    toBedeleted = toBedeleted.apply(addModifiedEntry, axis=1)
+    
+    if not toBedeleted.empty:
+        #print(superflousTypes)
+        toBedeleted_delete = toBedeleted[['_id','_rev','_deleted']]
+        if '_attachments' in docfieldsTypes:
+            docfieldsTypes.drop('_attachments')
+        DOC = DFtoDOC(toBedeleted_delete, docfieldsTypes)
+        
+        print(json.dumps(DOC['docs'], indent=4, sort_keys=True))
+        pouchDB_url_bulk = f'{db_url}/{db}/_bulk_docs'
+        bulkSaveChanges(DOC, pouchDB_url_bulk, auth)
+    survivorTypes = survivorTypes.apply(addModifiedEntry, axis=1)
+    if '_attachments' in survivorTypes.columns:
+        survivorTypes.pop('_attachments')
+    if '_attachments' in docfieldsTypes:
+        docfieldsTypes.drop('_attachments')
+    DOCgood = DFtoDOC(survivorTypes, docfieldsTypes)
+    print(json.dumps(DOCgood['docs'], indent=4, sort_keys=True))
+    pouchDB_url_bulk = f'{db_url}/{db}/_bulk_docs'
+    bulkSaveChanges(DOCgood, pouchDB_url_bulk, auth)     
 
-def createRelationMapping(docs, relation):
-    mapdictlist = []
-    for doc in docs:
-        for relateddocid in doc['resource']['relations'][relation]:
-            mapdict = {}
-            mapdict['relateddocid']= relateddocid
-            mapdict['docid']= doc['_id']
-            mapdictlist.append(mapdict)
 
-    map_df = pd.DataFrame(mapdictlist)
-    return map_df
-
-print(len(map_df))
-print(len(DFresources))
-print(len(set(list(DFresources['id'])) & set(list(map_df['drawingid']))))
-
-
-def writeDepicts(df, mapdf):
-    newdf = pd.DataFrame()
-    for index,row in df.iterrows():
-        typeids = [item['typeid'] for item in mapdf if item['drawingid']==row['id']]
-        if typeids:
-            print(typeids)
-            row['relations']= {}
-            #series['relations']['depicts'] = []
-            row['relations']['depicts']= typeids
-            newdf= newdf.append(row)
-    return newdf
-DFresources = writeDepicts(DFresources, mapdf=mapdictlist)
-#DFresources = removeUndepicts(DFresources)
-print('length with depicts: ', len(DFresources))
-DFresources_clean = DFresources_clean[['_id','_rev','_deleted']]
-DFresources = DFresources.apply(addModifiedEntry, axis=1)
-DFresources = DFresources.drop(columns='_attachments')
-DOC = DFtoDOC(DFresources, docfields)
 
 #print(json.dumps(DOC['docs'], indent=4, sort_keys=True))
 #bulkSaveChanges(DOC, pouchDB_url_bulk, auth)
