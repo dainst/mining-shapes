@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 import operator
 import numpy as np
+import random
 import math
 import matplotlib.pyplot as plt
 import shutil
@@ -137,9 +138,15 @@ def statOfLiesWithin(result):
 def filterOfResourceTypes(listOfNotIncludedTypes, result):
     filteredResources = [obj for obj in result['docs'] if not obj['resource']['type'] in listOfNotIncludedTypes ]
     return filteredResources
-def selectOfResourceTypes(listOfIncludedTypes, result):
-    selectedResources = [obj for obj in result if 'type' in obj['resource'].keys() ]
+def selectOfResourceTypes(listOfIncludedTypes, listofresources):
+    print('Selecting the following Types:', listOfIncludedTypes )
+    selectedResources = [obj for obj in listofresources if 'resource' in obj.keys() ]
+    print(listOfIncludedTypes[0])
+    print('Selecting:', len(selectedResources))
+    selectedResources = [obj for obj in selectedResources if 'type' in obj['resource'].keys() ]
+    print('Selecting:', len(selectedResources))
     selectedResources = [obj for obj in selectedResources if obj['resource']['type'] in listOfIncludedTypes ]
+    print('Selecting:', len(selectedResources))
     return selectedResources
 def replaceValue (series, key, value, newvalue):
     #print(key, series[key])
@@ -417,13 +424,13 @@ def findDocstoUpdateandCreate(targetdbrows, sourcedbrows):
      
     
 
-    for newrow in sourcedbrows['rows']:
+    for newrow in sourcedbrows:
         oldrow = next((oldrow for oldrow in targetdbrows['rows'] if oldrow['id'] == newrow['id']), None)
         if not oldrow:
             print('This row doesnt exist in targetdb: ', oldrow)
             newdocs_create.append(newrow)
         if oldrow:
-            print('This row exists in targetdb: ', oldrow)
+            #print('This row exists in targetdb: ', oldrow)
             newdocs_update.append(newrow)
     return newdocs_create, newdocs_update 
 
@@ -442,6 +449,28 @@ def newdocsUpdate(db, targetdb, newdocs_update):
     pouchDB_url_bulk = f'{db_url}/{targetdb}/_bulk_docs'
     bulkSaveChanges(docshull, pouchDB_url_bulk, auth)
 
+def getrelatives(listofdicts):
+    listofrelativesID = []
+    for resource in listofdicts:
+        if 'relations' in  resource['resource'].keys():
+            for relation in resource['resource']['relations']:
+                key, value = relation.items()
+                if isinstance(value, list):
+                    listofrelativesID = listofrelativesID + value
+                if isinstance(value, str):
+                    listofrelativesID.append(value)
+    return listofrelativesID
+
+
+
+
+
+
+def portionofdb(listofdicts, typeofresource, amount):
+    listofdicts_type = selectOfResourceTypes([typeofresource], listofresources= listofdicts)
+    listofdicts_type_amount = random.sample(listofdicts_type, amount)
+    listofrelativesID = getrelatives(listofdicts_type_amount)
+    print (listofrelativesID) 
 
 
 def newdocsCreate(db, targetdb, newdocs_create):
@@ -472,13 +501,13 @@ db_url = 'http://localhost:3000'
 #pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
 #pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
 pouchDB_url_alldbs = f'{db_url}/_all_dbs'
-imagestore = '/home/imagestore/'
+imagestore = 'E:/mining_shapes/imagestore/'
 #exportProject = 'shapes_import'
 alldblist = getListOfDBs()
 shapesdblist = [db for db in alldblist if db.endswith('_ed') or db.endswith('_edv2') ]
 print(alldblist)
-selectlist = ['lattara6_edv2', 'sidikhrebish_ed', 'urukcatalogs_ed', 'sabratha_ed', 'tallzira_ed', 'hayes1972_edv2', 'bonifay2004_ed', 'simitthus_ed']
-targetdb = 'idaishapes'
+selectlist = ['hayes1972_edv2', 'sabratha_ed']
+targetdb = 'idaishapes_test'
 shapesdblist = [db for db in shapesdblist if db in selectlist ]
 ## for testing only one db ##
 #shapesdblist = [db for db in shapesdblist if db in selectlist ]
@@ -491,8 +520,14 @@ allsourcedbrows = []
 
 for db in shapesdblist:
     sourcedbrows = getAllDocsv2(db_name = db)
-    allsourcedbrows = allsourcedbrows + sourcedbrows['rows']
-    newdocs_create, newdocs_update = findDocstoUpdateandCreate(targetdbrows, sourcedbrows)
+    print(len(sourcedbrows['rows']))
+    #sourcedbrows_select = portionofdb( 'Type', sourcedbrows['rows'], 100)
+    sourcedbrows_select = sourcedbrows['rows']
+    
+
+    allsourcedbrows = allsourcedbrows + sourcedbrows_select
+    print(len(allsourcedbrows))
+    newdocs_create, newdocs_update = findDocstoUpdateandCreate(targetdbrows, sourcedbrows_select)
 
     newdocsUpdate(db, targetdb, newdocs_update)
     newdocsCreate(db, targetdb, newdocs_create)
