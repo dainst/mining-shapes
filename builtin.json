@@ -1,0 +1,433 @@
+{
+    "Project": {
+        "required": true,
+        "fields": {
+            "identifier": {
+                "inputType": "Field.InputType.INPUT",
+                "editable": false,
+                "visible": false
+            },
+            "shortName": {
+                "inputType": "Field.InputType.INPUT"
+            },
+            "coordinateReferenceSystem": {
+                "inputType": "Field.InputType.DROPDOWN",
+                "valuelistId": "coordinate-reference-system-default-1"
+            },
+            "staff": {
+                "inputType": "Field.InputType.MULTIINPUT"
+            },
+            "campaigns": {
+                "inputType": "Field.InputType.MULTIINPUT"
+            }
+        },
+        "minimalForm": {
+            "valuelists": {
+                "coordinateReferenceSystem": "coordinate-reference-system-default-1"
+            },
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["shortName", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.PARENT",
+                    "fields": ["staff", "campaigns", "coordinateReferenceSystem"]
+                }
+            ]
+        }
+    },
+    "Operation": {
+        "supercategory": true,
+        "abstract": true,
+        "fields": {
+            "supervisor": {
+                "inputType": "Field.InputType.CHECKBOXES",
+                "valuelistFromProjectField": "staff",
+                "constraintIndexed": true
+            }
+        },
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Building": {
+        "parent": "Operation",
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Survey": {
+        "parent": "Operation",
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Trench": {
+        "parent": "Operation",
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Profile": {
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Planum": {
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Place": {
+        "fields": {
+            "gazId": {
+                "inputType": "Field.InputType.UNSIGNEDINT",
+                "constraintIndexed": true
+            }
+        },
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.PARENT",
+                    "fields": ["gazId"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Inscription": {
+        "mustLieWithin": true,
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                }
+            ]
+        }
+    },
+    "Room": {
+        "supercategory": true,
+        "userDefinedSubcategoriesAllowed": true,
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "RoomWall": {
+        "mustLieWithin": true,
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "RoomFloor": {
+        "mustLieWithin": true,
+        "fields": {
+        },
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "RoomCeiling": {
+        "mustLieWithin": true,
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "BuildingPart": {
+        "supercategory": true,
+        "userDefinedSubcategoriesAllowed": true,
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Area": {
+        "supercategory": true,
+        "userDefinedSubcategoriesAllowed": true,
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Feature": {
+        "supercategory": true,
+        "userDefinedSubcategoriesAllowed": true,
+        "fields": {
+            "period": {
+                "inputType": "Field.InputType.DROPDOWNRANGE",
+                "constraintIndexed": true,
+                "valuelistId": "periods-default-1"
+            },
+            "dating": {
+                "inputType": "Field.InputType.DATING"
+            }
+        },
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription", "Relation.SAME_AS"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry", "Relation.IS_PRESENT_IN"]
+                },
+                {
+                    "name": "Groups.TIME",
+                    "fields": ["period", "dating"]
+                }
+            ]
+        }
+    },
+    "Find": {
+        "supercategory": true,
+        "userDefinedSubcategoriesAllowed": true,
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.IDENTIFICATION",
+                    "fields": ["isInstanceOf"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "Sample": {
+        "mustLieWithin": true,
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.POSITION",
+                    "fields": ["geometry"]
+                }
+            ]
+        }
+    },
+    "TypeCatalog": {
+        "supercategory": true,
+        "fields": {
+            "criterion": {
+                "inputType": "Field.InputType.DROPDOWN",
+                "constraintIndexed": true,
+                "valuelistId": "TypeCatalog-criterion-default"
+            }
+        },
+        "minimalForm": {
+            "valuelists": {
+                "criterion": "TypeCatalog-criterion-default"
+            },
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.IDENTIFICATION",
+                    "fields": ["criterion"]
+                }
+            ]
+        }
+    },
+    "Type": {
+        "supercategory": true,
+        "mustLieWithin": true,
+        "fields": {},
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.IDENTIFICATION",
+                    "fields": ["hasInstance"]
+                }
+            ]
+        }
+    },
+    "Image": {
+        "supercategory": true,
+        "userDefinedSubcategoriesAllowed": true,
+        "required": true,
+        "fields": {
+            "height": {
+                "inputType": "Field.InputType.UNSIGNEDINT",
+                "editable": false
+            },
+            "width": {
+                "inputType": "Field.InputType.UNSIGNEDINT",
+                "editable": false
+            },
+            "originalFilename": {
+                "inputType": "Field.InputType.INPUT",
+                "visible": false,
+                "editable": false
+            },
+            "georeference": {
+                "inputType": "Field.InputType.NONE",
+                "visible": false,
+                "editable": false
+            },
+            "featureVectors": {
+                "inputType": "Field.InputType.NONE",
+                "visible": false,
+                "editable": false
+            },
+            "draughtsmen": {
+                "inputType": "Field.InputType.CHECKBOXES",
+                "valuelistFromProjectField": "staff",
+                "constraintIndexed": true
+            }
+        },
+        "minimalForm": {
+            "groups": [
+                {
+                    "name": "Groups.STEM",
+                    "fields": ["identifier", "category", "shortDescription"]
+                },
+                {
+                    "name": "Groups.PARENT",
+                    "fields": ["height", "width"]
+                }
+            ]
+        }
+    }
+}

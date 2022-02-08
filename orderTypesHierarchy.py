@@ -11,27 +11,21 @@ from math import isnan
 import itertools
 from decimal import Decimal  
 #from decimal import Decimal  
-auth = ('', 'blub')
-db_url = 'http://host.docker.internal:3000'
-db_name = 'shapes_import'
-pouchDB_url_find = f'{db_url}/{db_name}/_find'
-pouchDB_url_put = f'{db_url}/{db_name}/'
-pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
-pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
-imagestore = '/home/imagestore/'
-exportProject = 'shapes_import'
-FIG_SIZE = [20,30]
 
 
-def getAllDocs():
-    querydict={'selector':{}}
-    querydict['selector']['_id'] = {'$gt': None}
-    response = requests.post(pouchDB_url_find, auth=auth, json=querydict)
+
+def getAllDocsv2(db_name):
+    pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
+    response = requests.post(pouchDB_url_all, auth=auth)
     result = json.loads(response.text)
     return result
 
-def getAllDocsv2():
-    response = requests.post(pouchDB_url_all, auth=auth)
+
+def getAllDocs(db_name):
+    pouchDB_url_find = f'{db_url}/{db_name}/_find'
+    querydict={'selector':{}}
+    querydict['selector']['_id'] = {'$gt': None}
+    response = requests.post(pouchDB_url_find, auth=auth, json=querydict)
     result = json.loads(response.text)
     return result
 
@@ -198,62 +192,67 @@ def addModifiedEntry(doc):
     sec = "{:.3f}".format(Decimal(now.strftime('.%f')))
     entry['date'] = daytoSec + str(sec)[1:] + 'Z'
     #print(entry)
-    doc['modified']=[]
+    if not 'modified' in doc.keys():
+        doc['modified']=[]
     doc['modified'].append(entry)
+
+    
     #print(doc['modified'])
     return doc
 
+def createLiesWithin(series):
+    if 'liesWithin' in series['relations']:
+        print(series['relations']['liesWithin'])
+    else:
+        print(series['identifier'])
 
+auth = ('', 'blub')
+db_url = 'http://host.docker.internal:3000'
+db_name = 'urukcatalogs_ed'
+pouchDB_url_find = f'{db_url}/{db_name}/_find'
+pouchDB_url_put = f'{db_url}/{db_name}/'
+pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
+pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
+imagestore = '/home/imagestore/'
+FIG_SIZE = [20,30]
+auth = ('', 'blub')
+db_url = 'http://host.docker.internal:3000'
+#db_name = 'shapes_import'
+#pouchDB_url_find = f'{db_url}/{db_name}/_find'
+#pouchDB_url_put = f'{db_url}/{db_name}/'
+#pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
+#pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
+pouchDB_url_alldbs = f'{db_url}/_all_dbs'
+imagestore = '/home/imagestore/'
+#exportProject = 'shapes_import'
+
+selectlist = ['hayes1972_edv2']
+targetdb = 'idaishapes'
+
+## for testing only one db ##
+#shapesdblist = [db for db in shapesdblist if db in selectlist ]
+
+
+for db in selectlist:    
+    result = getAllDocs(db)
+    print(db)
+    print('AllDocs: ', len(result['docs']))
+    #listOfIncludedTypes = ['Type']
+    allTypes = selectOfResourceTypes(['Type'], result['docs'])
+    allDrawing = selectOfResourceTypes(['Drawing'], result['docs'])
+    #print('Drawings: ', len(Drawings) )
+    #listOfIncludedTypes = ['Type', 'TypeCatalog']
+    #TypesandCatalogs = selectOfResourceTypes(['Type', 'TypeCatalog'], result['docs'])
+    print('allTypes: ', len(allTypes) )
+    print('allDrawing: ', len(allDrawing) )
+    #print('ORIGINAL RESOURCE')
+    #print(allTypes[0])
+    DFresourcesTypes, docfieldsTypes = DOCtoDF(allTypes)
+    DFresourcesDrawing, docfieldsDrawing = DOCtoDF(allDrawing)
+    DFresourcesTypes.apply(createLiesWithin, axis=1)
+    print('Finish')
+    TypesWithoutLieswithin = [row['relations'].get('liesWithin') for index, row in DFresourcesTypes.iterrows()]
+    #pd.set_option("display.max_rows", None, "display.max_columns", None)
+    print(len(TypesWithoutLieswithin))
     
-result = getAllDocs()
-print('AllDocs: ', len(result['docs']))
-listOfIncludedTypes = ['Drawing']
-Drawings = selectOfResourceTypes(['Drawing'], result['docs'])
-print('Drawings: ', len(Drawings) )
-listOfIncludedTypes = ['Type', 'TypeCatalog']
-TypesandCatalogs = selectOfResourceTypes(['Type', 'TypeCatalog'], result['docs'])
-print('TypesandCatalogs: ', len(TypesandCatalogs) )
-#print('ORIGINAL RESOURCE')
-print(TypesandCatalogs[0])
-DFresources, docfields = DOCtoDF(Drawings)
-#print(TypesandCatalogs['resources']['relations']['isDepictedIn'])
-
-def createRelationMapping(docs, relation):
-    mapdictlist = []
-    for doc in docs:
-        for relateddocid in doc['resource']['relations'][relation]:
-            mapdict = {}
-            mapdict['relateddocid']= relateddocid
-            mapdict['docid']= doc['_id']
-            mapdictlist.append(mapdict)
-
-    map_df = pd.DataFrame(mapdictlist)
-    return map_df
-
-print(len(map_df))
-print(len(DFresources))
-print(len(set(list(DFresources['id'])) & set(list(map_df['drawingid']))))
-
-
-def writeDepicts(df, mapdf):
-    newdf = pd.DataFrame()
-    for index,row in df.iterrows():
-        typeids = [item['typeid'] for item in mapdf if item['drawingid']==row['id']]
-        if typeids:
-            print(typeids)
-            row['relations']= {}
-            #series['relations']['depicts'] = []
-            row['relations']['depicts']= typeids
-            newdf= newdf.append(row)
-    return newdf
-DFresources = writeDepicts(DFresources, mapdf=mapdictlist)
-#DFresources = removeUndepicts(DFresources)
-print('length with depicts: ', len(DFresources))
-DFresources_clean = DFresources_clean[['_id','_rev','_deleted']]
-DFresources = DFresources.apply(addModifiedEntry, axis=1)
-DFresources = DFresources.drop(columns='_attachments')
-DOC = DFtoDOC(DFresources, docfields)
-
-#print(json.dumps(DOC['docs'], indent=4, sort_keys=True))
-#bulkSaveChanges(DOC, pouchDB_url_bulk, auth)
-#print('DF RESOURCE')
+    
