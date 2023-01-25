@@ -355,6 +355,8 @@ def plot_bargraph_with_groupings(df, groupby, colourby, title, xlabel, ylabel):
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
+
+
 def addModifiedEntry(doc):
     now = datetime.now()
     entry = {}
@@ -363,7 +365,11 @@ def addModifiedEntry(doc):
     sec = "{:.3f}".format(Decimal(now.strftime('.%f')))
     entry['date'] = daytoSec + str(sec)[1:] + 'Z'
     #print(entry)
+    if not 'modified' in doc.keys():
+        doc['modified']=[]
     doc['modified'].append(entry)
+
+    
     #print(doc['modified'])
     return doc
 
@@ -435,7 +441,8 @@ def newdocsUpdate(db, targetdb, newdocs_update):
         sourcedoc['_rev']=match['value']['rev']
         remove_key = sourcedoc.pop('_attachments', None) 	
         sourcedocs_toupdate_rev.append(sourcedoc)
-        #copytree(os.path.join(imagestore, db), os.path.join(imagestore, targetdb), symlinks=False, ignore=None)
+        if 'resource' in sourcedoc.keys() and 'type' in sourcedoc['resource'] and sourcedoc['resource']['type'] == 'Drawing':
+            shutil.copyfile(os.path.join(imagestore, db, sourcedoc['_id']), os.path.join(imagestore, targetdb, sourcedoc['_id']))
     docshull = {}
     docshull['docs']=sourcedocs_toupdate_rev
     #print(json.dumps(docshull['docs'], indent=4, sort_keys=True))
@@ -472,13 +479,13 @@ db_url = 'http://localhost:3000'
 #pouchDB_url_bulk = f'{db_url}/{db_name}/_bulk_docs'
 #pouchDB_url_all = f'{db_url}/{db_name}/_all_docs'
 pouchDB_url_alldbs = f'{db_url}/_all_dbs'
-imagestore = '/home/imagestore/'
+imagestore = 'C:/Users/mhaibt/AppData/Roaming/idai-field-client/imagestore'
 #exportProject = 'shapes_import'
 alldblist = getListOfDBs()
 shapesdblist = [db for db in alldblist if db.endswith('_ed') or db.endswith('_edv2') ]
 print(alldblist)
-selectlist = ['lattara6_edv2', 'sidikhrebish_ed', 'urukcatalogs_ed', 'sabratha_ed', 'tallzira_ed', 'hayes1972_edv2', 'bonifay2004_ed', 'simitthus_ed']
-targetdb = 'idaishapes'
+selectlist = ['sabratha_ed', 'hayes1972_edv2']
+targetdb = 'idaishapes_test'
 shapesdblist = [db for db in shapesdblist if db in selectlist ]
 ## for testing only one db ##
 #shapesdblist = [db for db in shapesdblist if db in selectlist ]
@@ -533,6 +540,8 @@ def deleteDrawingsImagestore(targetdb):
         if not drawing:
             print('This image is not in targetdb drawings: ', image)
             os.remove(os.path.join(targetimagestore, image))
+
+
 
 deleteDrawingsImagestore(targetdb)
 
